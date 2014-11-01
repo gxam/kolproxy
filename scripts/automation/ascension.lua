@@ -854,6 +854,60 @@ endif
 		}
 	}
 
+	add_task {
+		when = not have_item("DNA extraction syringe") and not cached_stuff["DNA extraction syringe"],
+		task = {
+			message = "acquiring DNA extraction syringe",
+			nobuffing = true,
+			action = function()
+				pt = get_page("/campground.php", { ["action"] = "workshed" })
+				if not pt:contains("Little Geneticist DNA-Splicing Lab") then
+					inform "No DNA lab, skipping."
+					cached_stuff["no-dna-lab"] = true
+				end
+				did_action = true
+				cached_stuff["DNA extraction syringe"] = true
+			end
+		}
+	}
+
+	add_task { -- FIXME: not in BIG!
+		when = not have_intrinsic("Human-Weird Thing Hybrid") and not cached_stuff["no-dna-lab"] and not cached_stuff["Human-Weird Thing Hybrid"],
+		task = {
+			message = "acquiring Human-Weird Thing Hybrid intrinsic",
+			action = function()
+				pt = get_page("/place.php", { whichplace = "airport_sleaze", intro = 1 })
+				if not pt:contains("Air travel, ladies and gentlemen.") then
+					inform "Don't have sleaze airport, skipping."
+					did_action = true
+					cached_stuff["Human-Weird Thing Hybrid"] = true
+					return
+				end
+
+				pt = get_page("/campground.php", { action = "workshed" })
+				if not pt:contains("Human-Weird Thing Hybrid") then
+					inform "Getting DNA"
+
+					pt, url, again = (adventure { zoneid = 403 })()
+					if pt:contains("Nothing Could Be Finer") then
+						inform "Burned off diner intro adventure"
+						pt, url, again = (adventure { zoneid = 403 })()
+					end
+					pt, url, again = handle_adventure_result(pt, url, 403, macro_airport)
+					pt = get_page("/campground.php", { action = "workshed" })
+					if not pt:contains("Human-Weird Thing Hybrid") then
+						inform "Failed to get weird DNA"
+						did_action = false
+						return
+					end
+				end
+				get_page("/campground.php", { action = "dnainject", submit = "Hybridize yourself" })
+				did_action = have_intrinsic("Human-Weird Thing Hybrid")
+			end
+		}
+	}
+
+
 	local function count_spare_brains()
 		if have_item("good brain") or have_item("decent brain") or have_item("crappy brain") then
 			local want_brains = estimate_max_fullness() - fullness()
