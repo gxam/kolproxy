@@ -274,6 +274,7 @@ function get_automation_scripts(cached_stuff)
 		["Angry Jung Man"] = { fallback = "Slimeling" },
 		["Gelatinous Cubeling"] = { fallback = "Slimeling" },
 		["Warbear Drone"] = { attack = true, fallback = "Rogue Program" },
+		["Fist Turkey"] = { fallback = "Bloovian Groose" },
 		["Mad Hatrack with spangly sombrero"] = { id = 82, familiarequip = "spangly sombrero", fallback = "Slimeling even in fist", needsequip = true },
 		["Scarecrow with spangly mariachi pants"] = { id = 152, familiarequip = "spangly mariachi pants", fallback = "Mad Hatrack with spangly sombrero", needsequip = true },
 		["Scarecrow with studded leather boxer shorts"] = { id = 152, familiarequip = "studded leather boxer shorts", needsequip = true, fallback = "Llama Lama" },
@@ -318,7 +319,7 @@ function get_automation_scripts(cached_stuff)
 		end
 		local d = familiar_data[famname]
 		if missing_fams[famname] or (d and d.needsequip and not have_item(d.familiarequip)) then
-			if not familiar_data[famname].fallback or highskill_at_run then
+			if not next_famname_input and not d.fallback then
 				critical("No fallback familiar for " .. famname)
 			end
 			return raw_want_familiar(next_famname_input or (d and d.fallback))
@@ -409,7 +410,7 @@ function get_automation_scripts(cached_stuff)
 			famname = "Bloovian Groose"
 		end
 		if famname == "any" then
-			famname = "Bloovian Groose"
+			famname = "Fist Turkey"
 		end
 		return raw_want_familiar(famname)
 	end
@@ -1204,7 +1205,7 @@ function get_automation_scripts(cached_stuff)
 			if ((mainstat_type("Mysticality") and level() >= 9) or (level() >= 11) or (highskill_at_run and mmj_available)) and level() < 13 and challenge ~= "fist" then
 				table.insert(xs, "Ur-Kel's Aria of Annoyance")
 			end
-			if mainstat_type("Mysticality") and script_want_2_day_SCHR() then
+			if mainstat_type("Mysticality") and script_want_2_day_SCHR() and level() < 13 then
 				table.insert(xs, "Wry Smile")
 			end
 		end
@@ -1744,7 +1745,7 @@ endif
 	function f.coffee_pixie_stick()
 		inform "using coffee pixie stick"
 		async_get_page("/town_wrong.php")
-		async_get_page("/place.php", { whichplace = "arcade", action="arcade_skeeball" })
+		async_get_page("/place.php", { whichplace = "arcade", action = "arcade_skeeball" })
 		buy_item("coffee pixie stick")
 		if have_item("coffee pixie stick") then
 			local a = advs()
@@ -1763,7 +1764,7 @@ endif
 	function f.finger_cuffs()
 		inform "buying finger cuffs"
 		async_get_page("/town_wrong.php")
-		async_get_page("/place.php", { whichplace = "arcade", action="arcade_skeeball" })
+		async_get_page("/place.php", { whichplace = "arcade", action = "arcade_skeeball" })
 		buy_item("finger cuffs", 10)
 		if count_item("finger cuffs") >= 10 then
 			did_action = true
@@ -2473,13 +2474,16 @@ endif
 			local camppt = get_page("/bigisland.php", { place = "camp", whichcamp = 2 })
 			if camppt:contains("You don't have any quarters on file") then
 				inform "fight hippy boss"
+				script.bonus_target { "easy combat" }
+				ensure_buffs { "Spirit of Bacon Grease", "Astral Shell", "Ghostly Shell", "A Few Extra Pounds" }
+				maybe_ensure_buffs { "Mental A-cue-ity" }
 				fam "Frumious Bandersnatch"
 				f.heal_up()
 				if challenge == "boris" then
 					async_post_page("/campground.php", { action = "telescopehigh" })
 					script.maybe_ensure_buffs { "Billiards Belligerence" }
 					script.ensure_buffs { "Go Get 'Em, Tiger!", "Butt-Rock Hair" }
-					use_hottub()
+					script.force_heal_up()
 					if have_buff("Billiards Belligerence") and have_buff("Starry-Eyed") and hp() / maxhp() >= 0.9 then
 					else
 						stop "TODO: Fight hippy boss in Boris"
@@ -2495,8 +2499,6 @@ endif
 					end
 				end
 				ensure_mp(150)
-				ensure_buffs { "Spirit of Bacon Grease", "Astral Shell", "Ghostly Shell", "A Few Extra Pounds" }
-				maybe_ensure_buffs { "Mental A-cue-ity" }
 				async_get_page("/bigisland.php", { place = "camp", whichcamp = 1 })
 				result, resulturl = async_get_page("/bigisland.php", { action = "bossfight", pwd = get_pwd() })()
 				result, resulturl, did_action = handle_adventure_result(get_result(), resulturl, "?", macro_noodlegeyser(25))
@@ -2545,9 +2547,8 @@ endif
 			local junkmanptf = async_get_page("/bigisland.php", { action = "junkman", pwd = get_pwd() })
 			local pyroptf = async_get_page("/bigisland.php", { place = "lighthouse", action = "pyro", pwd = get_pwd() })
 			if concertptf():contains("has already taken the stage") and junkmanptf():contains("next shipment of cars ready") and pyroptf():contains("gave you the big boom today") then
-				inform "pick up padl phone"
-				result, resulturl, advagain = autoadventure { zoneid = 132 }
-				did_action = have_item("PADL Phone")
+				cached_stuff.finished_war_sidequests = true
+				did_action = true
 			else
 				stop "Not done with war sidequests when starting to fight war"
 			end
