@@ -2080,3 +2080,11 @@ cast Saucegeyser
 		return macro_noodleserpent_raw
 	end
 end
+
+function macro_airport()
+	return [[
+
+use DNA extraction syringe
+
+	]] .. macro_kill_monster()()
+end
