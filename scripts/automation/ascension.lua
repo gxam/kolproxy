@@ -4859,7 +4859,7 @@ endif
 	}
 
 	add_task {
-		prereq = quest_text("now the Council wants you to finish it") and not have_item("rock band flyers"),
+		prereq = quest_text("now the Council wants you to finish it") and not have_item("rock band flyers") and not cached_stuff.got_flyers,
 		f = script.get_flyers,
 	}
 
@@ -4990,6 +4990,9 @@ endif
 				if not have_item("rock band flyers") then
 					did_action = true
 				end
+			else
+				script.get_flyers()
+				did_action = cached_stuff.finished_war_sidequests
 			end
 		end,
 	}

@@ -1,6 +1,8 @@
-dofile("scripts/base/datafile.lua")
-dofile("scripts/base/util.lua")
-dofile("scripts/base/base-lua-functions.lua")
+function doloadfile(path) loadfile(path)() end
+
+doloadfile("scripts/base/datafile.lua")
+doloadfile("scripts/base/util.lua")
+doloadfile("scripts/base/base-lua-functions.lua")
 
 local function run_wrapped_function(f_env)
 
@@ -14,11 +16,11 @@ function load_file(category, name)
 		chatcommands[keyword] = { scriptname = name, f = func }
 	end
 	if category == "chat" then
-		dofile("scripts/"..name)
+		doloadfile("scripts/"..name)
 	end
 end
 
-dofile("scripts/kolproxy-internal/loaders.lua")
+doloadfile("scripts/kolproxy-internal/loaders.lua")
 
 -- print("sendchat rawinput", f_env.raw_input_params)
 

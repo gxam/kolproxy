@@ -102,7 +102,7 @@ end)
 
 add_processor("use item", function()
 -- TODO: unidentified/identified text on inventory.php does not get updated when used through ajax
-	potion = text:match([[<table><tr><td><center><img src="http://images.kingdomofloathing.com/itemimages/exclam.gif" width=30 height=30><br></center>.-You drink the ([a-z]- potion).]])
+	local potion = text:match([[<table><tr><td><center><img src="http://images.kingdomofloathing.com/itemimages/exclam.gif" width=30 height=30><br></center>.-You drink the ([a-z]- potion).]])
 	if potion then
 		local tbl = ascension["zone.dod.potions"] or {}
 		effects = {
@@ -171,13 +171,13 @@ local function can_be_potion(itemid, whicheffect)
 end
 
 add_ascension_warning("use item", function()
-	if can_be_potion(tonumber(params.whichitem), "booze") and drunkenness() <= estimate_max_safe_drunkenness() and drunkenness() + 3 > estimate_max_safe_drunkenness() then
+	if can_be_potion(tonumber(params.whichitem), "booze") and drunkenness() <= estimate_max_safe_drunkenness() and drunkenness() + 3 > estimate_max_safe_drunkenness() and estimate_max_safe_drunkenness() > 0 then
 		return "Using this potion could make you overdrunk.", "dod potion could make overdrunk"
 	end
 end)
 
 add_extra_ascension_warning("use item", function()
-	if can_be_potion(tonumber(params.whichitem), "booze") then
+	if can_be_potion(tonumber(params.whichitem), "booze") and estimate_max_safe_drunkenness() > 0 then
 		return "This potion could be booze.", "dod potion could be booze"
 	end
 end)
