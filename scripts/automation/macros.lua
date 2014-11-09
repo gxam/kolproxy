@@ -1692,7 +1692,7 @@ function macro_orc_chasm()
   local maybetrail = ""
 
   if false then
-    maybetrail = cast_olfaction("xxx pr0n") 
+    maybetrail = cast_olfaction("xxx pr0n")
   end
 
   return [[
@@ -2102,12 +2102,4 @@ cast Saucegeyser
 	else
 		return macro_noodleserpent_raw
 	end
-end
-
-function macro_airport()
-	return [[
-
-use DNA extraction syringe
-
-	]] .. macro_kill_monster()()
 end
