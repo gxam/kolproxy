@@ -95,7 +95,8 @@ doProcessPageChat ref uri params = do
 				case uriPath effuri of
 					-- TODO: Make sure they're logged in order!
 					"/newchatmessages.php" -> log_chat_messages ref pagetext
-					_ -> return ()
+					"/submitnewchat.php" -> log_chat_messages ref pagetext
+					_ -> return () -- TODO: Log this too?
 				return $ Right (pagetext, effuri, hdrs, code)
 			Left e -> do
 				return $ Left (add_error_message_to_page ("processchat exception: " ++ (show (e :: SomeException))) (Data.ByteString.Char8.pack "{ Kolproxy page processing. }"), mkuri "/error", [], 500)
@@ -123,12 +124,12 @@ kolProxyHandlerChat uri params baseref = do
 	let allparams = concat $ catMaybes $ [decodeUrlParams uri, params]
 	x <- case uriPath uri of
 		"/favicon.ico" -> do
-			Right (x, _, _, _) <- join $ (processPage ref) ref uri params
-			return $ Right x
+			Right (x, u, _, _) <- join $ (processPage ref) ref uri params
+			return $ Right (x, u, "text/html; charset=UTF-8")
 		_ -> runChatRequestScript ref uri allparams
 	case x of
-		Right msg -> do
-			makeResponseWithNoExtraHeaders msg uri [("Content-Type", "application/json; charset=UTF-8"), ("Cache-Control", "no-cache")]
+		Right (msg, u, ct) -> do
+			makeResponseWithNoExtraHeaders msg u [("Content-Type", ct), ("Cache-Control", "no-cache")]
 		Left (msg, trace) -> do
 			putWarningStrLn $ "chat error: " ++ (show msg ++ "\n" ++ trace)
 			makeResponseWithNoExtraHeaders (Data.ByteString.Char8.pack "") uri [("Cache-Control", "no-cache")]
@@ -269,7 +270,7 @@ kolProxyHandler uri params baseref = do
 			response <- log_time_interval origref ("browser request: " ++ (show uri)) $ runBrowserRequestScript origref uri allparams reqtype
 			case response of
 				Left (pt, effuri) -> makeErrorResponse pt effuri []
-				Right (pt, effuri) -> makeResponse pt effuri []
+				Right (pt, effuri, ct) -> makeResponseWithNoExtraHeaders pt effuri [("Content-Type", ct), ("Cache-Control", "no-cache")]
 	return retresp
 
 runKolproxy = (do

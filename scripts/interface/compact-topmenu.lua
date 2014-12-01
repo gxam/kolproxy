@@ -167,7 +167,7 @@ add_interceptor("/topmenu.php", function()
 	end
 end)
 
-add_processor("/skills.php", function()
+add_processor("/runskillz.php", function()
 	if not setting_enabled("enable most-recently-used list") then return end
 	if params and params.whichskill then
 		local desc = string.format("cast %i %i", tonumber(params.quantity or 1), tonumber(params.whichskill))
@@ -255,7 +255,7 @@ html, body {
 
 			<div class='abc'><span class='title'><a target='mainpane' href='woods.php'>woods</a> </span><br><a target='mainpane' href='tavern.php'>tavern</a> <a target='mainpane' href='place.php?whichplace=forestvillage&action=fv_untinker'>unt</a><br><a target='mainpane' href='place.php?whichplace=forestvillage&action=fv_friar'>fl</a> <a target='mainpane' href='friars.php'>friars</a> <a target='mainpane' href='bhh.php'>bhh</a> </div>
 
-			<div class='abc a'><span class='title'><a target='_top' href='logout.php'>log out</a></span><br><a target='kolcalendar' href='http://noblesse-oblige.org/calendar/'>cal</a> <a target='koldonate' href='donatepopup.php'>donate</a><br><a target='mainpane' href='adminmail.php'>bug</a> <a href='http://radio.kingdomofloathing.com/' target='kolradio'>radio</a></div>
+			<div class='abc a'><span class='title'><a target='_top' href='logout.php'>log out</a></span><br><a target='kolcalendar' href='http://noblesse-oblige.org/calendar/'>cal</a> <a target='koldonate' href='donatepopup.php'>donate</a><br><a target='mainpane' href='adminmail.php'>bug</a> <a target='mainpane' href='community.php'>comm</a></div>
 		</div>
 	</div>
 </body>
@@ -347,7 +347,7 @@ $("#mrulist").change(function() {
 	var sel_opt = $("#mrulist option:selected")
 	var params = JSON.parse(sel_opt.attr("params"))
 	var url = "/inv_use.php"
-	if (params['whichskill']) url = "/skills.php"
+	if (params['whichskill']) url = "/runskillz.php"
 	if (params['whichstore']) url = "/store.php"
 	dojax(url, "GET", sel_opt.attr("text"), params)
 	top.menupane.location = "topmenu.php"

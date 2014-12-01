@@ -43,41 +43,56 @@ local function run_wrapped_function_internal(f_env)
 		if not tbl[1] then tbl = nil end
 		local a, b, c = kolproxycore_async_submit_page("GET", f_env.request_path, tbl)()
 		if a then
+			--print("BB", b)--, kolproxycore_splituri(b))
+			if b:contains("/newchatmessages.php") then
+				f_env.text = a
+				--print("A before", a)
+				a = chat_wrapped(f_env)
+				--print("A after chat_wrapped", a)
+			end
 			return a, b
 		else
 			error("Error downloading page " .. tostring(f_env.request_path) .. ":<br><br>" .. tostring(b))
 		end
 	end
 
-	local sendchat_result = ""
+	local chat_result = ""
 	if f_env.request_path == "/submitnewchat.php" then
-		sendchat_result = sendchat_wrapped(f_env)
+		chat_result = sendchat_wrapped(f_env)
 	end
 
-	local newgraf = sendchat_result:match([[^//kolproxy:sendgraf:(.+)$]])
+	local newgraf = chat_result:match([[^//kolproxy:sendgraf:(.+)$]])
 
-	if sendchat_result == "" then
+	if chat_result == "" then
 		return submit_original_request()
 	elseif newgraf then
-		local allparams = parse_params(f_env.raw_input_params)
-		allparams.graf = newgraf
-		local a, b = get_page("/submitnewchat.php", allparams)
+		local tbl = parse_request_param_string(f_env.raw_input_params)
+		if not tbl[1] then
+			tbl = nil
+		else
+			for _, x in ipairs(tbl) do
+				if x.key == "graf" then
+					x.value = newgraf
+				end
+			end
+		end
+		local a, b, c = kolproxycore_async_submit_page("GET", "/submitnewchat.php", tbl)()
 		if a then
 			return a, b
 		else
 			error("Error downloading page " .. tostring(f_env.request_path) .. ":<br><br>" .. tostring(b))
 		end
 	else
-		return sendchat_result
+		return chat_result, f_env.request_path
 	end
 end
 
 local function run_wrapped_function(f_env)
 	local ok, pt, url = xpcall(function() return run_wrapped_function_internal(f_env) end, function(e) return { msg = e, trace = debug.traceback(e, 2) } end)
 	if ok then
-		return pt--, url
+		return pt, url, "text/html; charset=UTF-8"
 	else
-		return show_error(f_env.text or "{ No page text. }", pt)--, "/kolproxy-error"
+		return show_error(f_env.text or "{ No page text. }", pt), "/kolproxy-error", "text/html; charset=UTF-8"
 	end
 end
 

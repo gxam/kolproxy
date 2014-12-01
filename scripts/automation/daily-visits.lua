@@ -124,6 +124,8 @@ function do_daily_visits()
 		"cheap toaster",
 		"cheap toaster",
 		"Chester's bag of candy",
+		"Chroner cross",
+		"Chroner trigger",
 		"creepy voodoo doll",
 		"cursed microwave",
 		"cursed pony keg",
@@ -133,6 +135,7 @@ function do_daily_visits()
 		"handmade hobby horse",
 		"Idol of Ak'gyxoth",
 		"KoL Con Six Pack",
+		"picky tweezers",
 		"set of jacks",
 		"Taco Dan's Taco Stand Flier",
 		"Trivial Avocations board game",
@@ -218,6 +221,7 @@ function do_daily_visits()
 		dopage("/campground.php", { preaction = "summonspencersitems" })
 		dopage("/campground.php", { preaction = "summonaa" })
 		dopage("/campground.php", { preaction = "summonthinknerd" })
+		dopage("/campground.php", { preaction = "summonconfiscators" })
 
 		queue_page_result(cast_skill("Lunch Break"))
 		queue_page_result(cast_skill("Advanced Cocktailcrafting"))
