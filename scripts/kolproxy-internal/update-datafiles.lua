@@ -254,11 +254,14 @@ function parse_buffs()
 	for l in io.lines("cache/files/statuseffects.txt") do
 		l = remove_line_junk(l)
 		local tbl = split_tabbed_line(l)
-		local buffname, usecmd = tbl[2], tbl[5]
+		local buffname, descid, usecmd = tbl[2], tbl[4], tbl[5]
 		local castname = (usecmd or ""):match("^cast 1 ([^|]+)")
 		if buffname and not buffs[buffname] and not blacklist["buff: " .. buffname] then
 			softwarn("missing buff", buffname)
 			buffs[buffname] = {}
+		end
+		if buffname and descid and not blacklist["buff: " .. buffname] then
+			buffs[buffname].descid = descid
 		end
 		if buffname and castname and not blacklist["buff: " .. buffname] then
 			-- Datafile is full of capitalization problems
@@ -338,7 +341,8 @@ function parse_outfits()
 	local outfits = {}
 	for l in io.lines("cache/files/outfits.txt") do
 		l = remove_line_junk(l)
-		local name, itemlist = l:match([[^[0-9]*	([^	]+)	(.+)$]])
+		local tbl = split_tabbed_line(l)
+		local outfitid, name, avatar, itemlist = tonumber(tbl[1]), tbl[2], tbl[3], tbl[4]
 		if name and itemlist then
 			local items = {}
 			for x in (", "..itemlist):gmatch(", ([^,]+)") do
@@ -411,10 +415,10 @@ function parse_items()
 	for l in io.lines("cache/files/items.txt") do
 		l = remove_line_junk(l)
 		local tbl = split_tabbed_line(l)
-		local itemid, name, picturestr, itemusestr, accessstr, autosellstr, plural = tonumber(tbl[1]), tbl[2], tbl[4], tbl[5], tbl[6], tbl[7], tbl[8]
+		local itemid, name, descidstr, picturestr, itemusestr, accessstr, autosellstr, plural = tonumber(tbl[1]), tbl[2], tbl[3], tbl[4], tbl[5], tbl[6], tbl[7], tbl[8]
 		local picture = (picturestr or ""):match("^(.-)%.gif$")
 		if itemid and name and not blacklist[name] then
-			items[name] = { id = itemid, picture = picture, sellvalue = tonumber(autosellstr) }
+			items[name] = { id = itemid, picture = picture, sellvalue = tonumber(autosellstr), descid = tonumber(descidstr) }
 			lowercasemap[name:lower()] = name
 			for _, u in ipairs(split_commaseparated(itemusestr or "")) do
 				if itemslots[u] then

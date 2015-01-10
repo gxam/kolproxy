@@ -146,7 +146,7 @@ add_printer("/fight.php", function()
 		else
 			value = "{&nbsp;unidentified&nbsp;}"
 		end
-		text = text:gsub([[(<option picurl=exclam [^>]+>]] .. potion .. [[ %([0-9]+%))(</option>)]], "%1 " .. value .. "%2")
+		text = text:gsub([[(<option [^>]+>]] .. potion .. [[ %([0-9]+%))(</option>)]], "%1 " .. value .. "%2")
 	end
 end)
 

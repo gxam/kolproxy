@@ -23,7 +23,6 @@ import System.Environment (getArgs)
 import System.IO
 import Text.Regex.TDFA
 import qualified Data.ByteString.Char8
-import qualified Data.Map
 
 get_the_state ref = do
 	cr <- canReadState ref
@@ -60,14 +59,7 @@ doProcessPage ref uri params = do
 
 			state_after <- get_the_state ref
 
-			-- TODO: Make sure this is definitely the very next thing logged. Make a channel for logging and write to it
-			forkIO_ "proxy:logresult" $ (do
-				status_before <- status_before_func
-				status_after <- status_after_func
-				log_page_result ref (Right status_before) log_time state_before uri params effuri pagetext status_after state_after
-				return ()) `catch` (\e -> putErrorStrLn $ "processpage logging exception: " ++ (show (e :: KolproxyException)))
-
-			forkIO_ "proxy:checkserverstate" $ checkServerState ref
+			log_page_result ref status_before_func log_time state_before uri params effuri pagetext status_after_func state_after
 
 			return (y, pagetext, effuri, hdrs, code)
 		putMVar mv =<< case x of
@@ -149,7 +141,7 @@ make_ref baseref = do
 			apixf <- load_api_status_to_mv_mkapixf ref
 			load_api_status_to_mv ref mv apixf
 		force_latest_status_parse ref
-		void $ loadState ref
+		ensureLoadedState ref
 		return True) `catch` (\e -> do
 			putWarningStrLn $ "loadstate exception: " ++ show (e :: SomeException)
 			return False)
@@ -198,9 +190,7 @@ kolProxyHandler uri params baseref = do
 				putInfoStrLn $ "login.php -> getting server state"
 				ai <- getApiInfo newref
 				putInfoStrLn $ "Logging in as " ++ (charName ai) ++ " (ascension " ++ (show $ ascension ai) ++ ")"
-				what <- loadSettingsFromServer newref
-				putInfoStrLn $ "settings loaded: " ++ (fromMaybe "nothing" what)
-				writeIORef (have_logged_in_ref_ $ globalstuff_ $ newref) True
+				loadSettingsFromServer newref
 
 				forkIO_ "proxy:compresslogs" $ compressLogs (charName ai) (ascension ai)
 
@@ -225,7 +215,7 @@ kolProxyHandler uri params baseref = do
 				handle_login (pt, effuri, allhdrs, code)
 
 		"/custom-clear-lua-script-cache" -> check_pwd_for $ Just $ do
-			writeIORef (luaInstances_ $ sessionData $ origref) Data.Map.empty
+			reset_lua_instances origref
 			writeIORef (blocking_lua_scripting origref) False
 			makeResponse (Data.ByteString.Char8.pack $ "Cleared Lua script cache.") uri []
 
@@ -261,11 +251,9 @@ kolProxyHandler uri params baseref = do
 	retresp <- log_time_interval origref ("run handler for: " ++ (show uri)) $ case response of
 		Just r -> r
 		Nothing -> do
-			canread_before <- canReadState origref
-
-			-- TODO: Move to specific handler? Remove entirely?
-			when (uriPath uri == "/logout.php" && canread_before) $ storeSettingsOnServer origref "logging out"
-
+			when (uriPath uri == "/logout.php") $ do
+				canread_before <- canReadState origref
+				when canread_before $ storeSettings origref
 			let reqtype = if isJust params then "POST" else "GET"
 			response <- log_time_interval origref ("browser request: " ++ (show uri)) $ runBrowserRequestScript origref uri allparams reqtype
 			case response of
@@ -313,7 +301,7 @@ runbot filename = do
 	let login_useragent = kolproxy_version_string ++ " (" ++ platform_name ++ ")" ++ " BotScript/0.1 (" ++ filename ++ ")"
 	let login_host = fromJust $ parseURI $ "http://www.kingdomofloathing.com/"
 
-	sc <- make_sessionconn globalref "http://www.kingdomofloathing.com/" (error "dblogstuff") (error "statestuff")
+	sc <- make_sessionconn globalref "http://www.kingdomofloathing.com/" (error "dblogstuff")
 
 	Just username <- getEnvironmentSetting "KOLPROXY_BOTSCRIPT_USERNAME"
 	Just passwordmd5hash <- getEnvironmentSetting "KOLPROXY_BOTSCRIPT_PASSWORDMD5HASH"

@@ -327,8 +327,14 @@ function set_ascension_turn_counter(name, length)
 end
 
 function add_chat_redirect(cmd, msg, href, hrefparams)
-	add_chat_trigger(cmd, function()
-		return [[<span style="color: green">{ ]] .. msg .. [[ }</span><!--js(top.mainpane.location.href=']] .. make_href(href, hrefparams) .. [[')-->]]
+	return add_custom_chat_redirect(cmd, msg, function()
+		return make_href(href, hrefparams)
+	end)
+end
+
+function add_custom_chat_redirect(cmd, msg, f)
+	add_chat_trigger(cmd, function(line)
+		return [[<span style="color: green">{ ]] .. msg .. [[ }</span><!--js(top.mainpane.location.href=']] .. f(line) .. [[')-->]]
 	end)
 end
 
@@ -571,7 +577,14 @@ function estimate_mallbuy_cost(item, amount)
 		--print("try", item, num)
 		local c = d["buy "..num]
 		if c and num <= amount then
-			return try(num * 10) or c
+			local c10 = try(num * 10)
+			if not c10 then
+				return c
+			elseif c10 >= c * 10 then
+				return c * 10
+			else
+				return c10
+			end
 		end
 	end
 	local c = try(1)

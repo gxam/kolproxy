@@ -46,6 +46,24 @@ if table then
 		end
 		return sum
 	end
+
+	function table.avg(tbl)
+		local sum = 0
+		local count = 0
+		for _, x in pairs(tbl) do
+			sum = sum + x
+			count = count + 1
+		end
+		return sum / count
+	end
+
+	function table.map(tbl, f)
+		local new_tbl = {}
+		for _, x in ipairs(tbl) do
+			table.insert(new_tbl, f(x))
+		end
+		return new_tbl
+	end
 end
 
 if math then
@@ -127,6 +145,10 @@ function get_allparams_keyvaluetbl()
 	return parse_params_raw(input_params)
 end
 
+function make_resubmit_href()
+	return raw_make_href(requestpath, get_allparams_keyvaluetbl())
+end
+
 -- TODO: remove?
 function parse_params(str)
 	local rawtbl = parse_params_raw(str)
@@ -172,7 +194,9 @@ function make_plural(v, singular, plural)
 end
 
 function display_number_8k_2M(n)
-	if n <= 8000 then
+	if n >= math.huge then
+		return tostring(n)
+	elseif n <= 8000 then
 		if n == math.floor(n) then
 			return string.format("%d", n)
 		else
@@ -186,7 +210,9 @@ function display_number_8k_2M(n)
 end
 
 function display_number_10k_10M(n)
-	if n < 10000 then
+	if n >= math.huge then
+		return tostring(n)
+	elseif n < 10000 then
 		return tostring(n)
 	elseif n < 10000000 then
 		return string.format("%dk", n / 1000)
@@ -196,7 +222,9 @@ function display_number_10k_10M(n)
 end
 
 function display_number_3figs(n)
-	if n < 1000 then
+	if n >= math.huge then
+		return tostring(n)
+	elseif n < 1000 then
 		return tostring(n)
 	elseif n < 9995 then
 		return string.format("%.2fk", n / 1000)
@@ -213,7 +241,31 @@ function display_number_3figs(n)
 	end
 end
 
-display_number = display_number_8k_2M
+function display_number_9k_90k(n)
+	if n >= math.huge then
+		return tostring(n)
+	elseif n < 1000 then
+		if n == math.floor(n) then
+			return string.format("%d", n)
+		else
+			return string.format("%.1f", n)
+		end
+	elseif n < 10*1000 then
+		return string.format("%.1fk", n / 1000)
+	elseif n <= 1000*1000 then
+		return string.format("%.0fk", n / 1000)
+	elseif n <= 10*1000*1000 then
+		return string.format("%.1fM", n / 1000000)
+	elseif n <= 1000*1000*1000 then
+		return string.format("%.0fM", n / 1000000)
+	elseif n <= 10*1000*1000*1000 then
+		return string.format("%.1fG", n / 1000000000)
+	else
+		return string.format("%.0fG", n / 1000000000)
+	end
+end
+
+display_number = display_number_9k_90k
 
 function display_signed_integer(n)
 	if n < 0 then

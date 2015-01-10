@@ -270,9 +270,9 @@ function make_strarrow(upeffect)
 		local skillid = tonumber(upeffect:match("skill:([0-9]+)"))
 		local itemid = tonumber(upeffect:match("item:([0-9]+)"))
 		if skillid then
-			return string.format([[<img src="%s" style="cursor: pointer;" class="strarrowskill" onclick="kolproxy_cast_skillid(%d, event.shiftKey)" data-skillid="%d">]], "http://images.kingdomofloathing.com/otherimages/bugbear/uparrow.gif", skillid, skillid)
+			return string.format([[<img src="%s" style="cursor: pointer;" class="strarrowskill" data-skillid="%d">]], "http://images.kingdomofloathing.com/otherimages/bugbear/uparrow.gif", skillid, skillid)
 		elseif itemid then
-			return string.format([[<img src="%s" style="cursor: pointer;%s" class="strarrowitem" onclick="kolproxy_use_itemid(%d, event.shiftKey)" data-itemid="%d">]], "http://images.kingdomofloathing.com/otherimages/bugbear/uparrow.gif", have_item(itemid) and "" or "opacity: 0.5;", itemid, itemid)
+			return string.format([[<img src="%s" style="cursor: pointer;%s" class="strarrowitem" data-itemid="%d">]], "http://images.kingdomofloathing.com/otherimages/bugbear/uparrow.gif", have_item(itemid) and "" or "opacity: 0.5;", itemid, itemid)
 		end
 	end
 	return ""
@@ -580,6 +580,7 @@ function get_common_js()
 				var newquantity = prompt("How many times?")
 				if (newquantity >= 1) quantity = newquantity
 			}
+			if (quantity <= 0) return
 			$.ajax({
 				type: 'GET',
 				url: "/runskillz.php?whichskill=" + skillid + "&ajax=1&action=Skillz&targetplayer=]] .. playerid() .. [[&quantity=" + quantity + "&pwd=]] .. session.pwd .. [[",
@@ -612,8 +613,10 @@ function get_common_js()
 			return false
 		}
 		$(document).ready(function() {
-			$('.strarrowskill').bind('contextmenu', function(e) { e.preventDefault(); kolproxy_cast_skillid($(this).attr("data-skillid"), true) })
-			$('.strarrowitem').bind('contextmenu', function(e) { e.preventDefault(); kolproxy_use_itemid($(this).attr("data-itemid"), true) })
+			$('.strarrowskill').click(function(e) { kolproxy_cast_skillid($(this).attr("data-skillid"), e.shiftKey); return false })
+			$('.strarrowskill').bind('contextmenu', function(e) { kolproxy_cast_skillid($(this).attr("data-skillid"), true); return false })
+			$('.strarrowitem').click(function(e) { kolproxy_use_itemid($(this).attr("data-itemid"), e.shiftKey); return false })
+			$('.strarrowitem').bind('contextmenu', function(e) { kolproxy_use_itemid($(this).attr("data-itemid"), true); return false })
 		})
 	</script>
 
@@ -885,12 +888,20 @@ function charpane_equipment_line(slots)
 	return string.format([[<span style="white-space: nowrap">%s</span>]], table.concat(icons))
 end
 
-function charpane_familiar_weight_line()
+function charpane_familiar_setup_link()
 	if familiar("Reanimated Reanimator") then
-		return string.format([[%s lbs. (<a href="main.php?talktoreanimator=1" target="mainpane">chat</a>)]], buffedfamiliarweight())
+		return "main.php?talktoreanimator=1", "chat"
 	elseif familiar("Grim Brother") then
-		-- TODO: cache that it's done today
-		return string.format([[%s lbs. (<a href="familiar.php?action=chatgrim&pwd=%s" target="mainpane">talk</a>)]], buffedfamiliarweight(), session.pwd)
+		return string.format("familiar.php?action=chatgrim&pwd=%s", session.pwd), "talk"
+	elseif familiar("Mini-Crimbot") then
+		return "main.php?action=minicrimbot", "config"
+	end
+end
+
+function charpane_familiar_weight_line()
+	local link, title = charpane_familiar_setup_link()
+	if link and title then
+		return string.format([[%s lbs. (<a href="%s" target="mainpane">%s</a>)]], buffedfamiliarweight(), link, title)
 	else
 		return string.format("%s lbs.", buffedfamiliarweight())
 	end
