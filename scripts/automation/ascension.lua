@@ -969,6 +969,10 @@ endif
 		stop "Beaten up..."
 	end
 
+	if pastathrall("Vampieroghi") and pastathralllevel() >= 5 and have_apartment_building_cursed_buff() then
+		stop "Vampieroghi pastamancer thrall + hidden city curses is a bad combo, finish it manually."
+	end
+
 	if locked() then
 		stop "Already busy doing something else"
 	end
@@ -2147,7 +2151,7 @@ endif
 			have_item("Wrecked Generator") and
 			count_item("milk of magnesium") >= 2 and
 			fullness() == 0 and
-			not script.get_turns_until_sr() and
+			not script.know_semirare_numbers() and
 			level() >= 5,
 		task = {
 			message = "eat moon pies and fortune cookie",
@@ -2166,7 +2170,7 @@ endif
 				set_result(eat_item("fortune cookie")())
 				set_result(eat_item("Moon Pie")())
 				set_result(eat_item("Moon Pie")())
-				did_action = script.get_turns_until_sr() and fullness() == 11
+				did_action = script.know_semirare_numbers() and fullness() == 11
 			end
 		}
 	}
@@ -2179,7 +2183,7 @@ endif
 			have_item("Wrecked Generator") and
 			count_item("milk of magnesium") >= 1
 			and fullness() == 11 and
-			not script.get_turns_until_sr() and
+			not script.know_semirare_numbers() and
 			level() >= 5 and
 			count_item("tasty tart") >= 2,
 		task = {
@@ -2196,7 +2200,7 @@ endif
 				set_result(eat_item("fortune cookie")())
 				set_result(eat_item("tasty tart")())
 				set_result(eat_item("tasty tart")())
-				did_action = script.get_turns_until_sr() and fullness() == 14
+				did_action = script.know_semirare_numbers() and fullness() == 14
 			end
 		}
 	}
@@ -2543,15 +2547,14 @@ endif
 		}
 	}
 
-	do
-		local pt, pturl, did_sr = script.check_sr()
-		if pt and pturl then
-			return pt, pturl, did_sr
-		end
-	end
-	if not turns_to_next_sr then
-		turns_to_next_sr = 1000000
-	end
+	add_task {
+		when = script.semirare_within_N_turns(1),
+		task = {
+			message = "picking up semirare",
+			nobuffing = true,
+			action = script.pick_up_sr,
+		}
+	}
 
 	local use_new_faxing = ascensionpath("BIG!") and (script.have_familiar("Obtuse Angel") or script.have_familiar("Reanimated Reanimator"))
 
@@ -5766,6 +5769,7 @@ local function path_supports_fax_machine()
 	return not ascensionpath("Avatar of Boris") and not ascensionpath("Avatar of Jarlsberg") and not ascensionpath("Avatar of Sneaky Pete") and not fax_machine_is_too_old()
 end
 
+-- TODO: stop on semirares option
 local ascension_script_options_tbl = {
 	["disable autoattack"] = { yes = "use script macros", no = "use autoattack", default_yes = true, when = function() return autoattack_is_set() end },
 	["stop on imported beer"] = { yes = "stop", no = "drink as fallback booze", default_yes = true },
