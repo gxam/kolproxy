@@ -3,6 +3,7 @@ __allow_global_writes = true
 function get_automation_tasks(script, cached_stuff)
 	local t = {}
 	local task = t
+	local tasks = t
 
 	t.summon_tomes = {
 		message = "summon tomes",
@@ -19,7 +20,7 @@ function get_automation_tasks(script, cached_stuff)
 			}
 			if moonsign_area("Degrassi Knoll") then
 				local want_items = {}
-				if want_smith_weapons[playerclassname()] and not have_item("Thor's Pliers") then table.insert(want_items, want_smith_weapons[playerclassname()]) end
+				if want_smith_weapons[maybe_playerclassname()] and not have_item("Thor's Pliers") then table.insert(want_items, want_smith_weapons[maybe_playerclassname()]) end
 				table.insert(want_items, "A Light that Never Goes Out")
 				table.insert(want_items, "Hairpiece On Fire")
 				table.insert(want_items, "Vicar's Tutu")
@@ -651,31 +652,71 @@ mark m_done
 		}
 	end
 
-	function t.there_can_be_only_one_topping()
-		if ascension_script_option("manual lvl 9 quest") then
-			stop "STOPPED: Ascension script option set to do lvl 9 quest manually"
-		end
-		if quest_text("Find a way across") or quest_text("Finish building a bridge across") then
-			return t.do_orc_chasm()
-		elseif quest_text("Speak to the Highland Lord") or quest_text("Go see the Highland Lord") then
-			return {
-				message = "visit highland lord",
-				action = function()
-					get_page("/place.php", { whichplace = "highlands", action = "highlands_dude" })
-					refresh_quest()
-					did_action = not (quest_text("Speak to the Highland Lord") or quest_text("Go see the Highland Lord"))
-				end
-			}
-		elseif quest_text("* Oil Peak") then
-			return t.do_oil_peak()
-		elseif quest_text("* A-boo Peak") then
-			return t.do_aboo_peak()
-		elseif quest_text("* Twin Peak") then
-			return t.do_twin_peak()
-		else
-			stop "TODO: handle only one topping quest"
-		end
+	local function want_lvl_9_quest()
+		return level() >= 11 and not quest_text("Black Market")
 	end
+
+	t.manual_lvl_9_quest = {
+		when = quest("There Can Be Only One Topping") and
+			ascension_script_option("manual lvl 9 quest"),
+		task = {
+			message = "do lvl 9 quest manually",
+			nobuffing = true,
+			action = function()
+				stop "STOPPED: Ascension script option set to do lvl 9 quest manually"
+			end,
+		}
+	}
+
+	t.find_way_across_bridge = {
+		when = quest("There Can Be Only One Topping") and
+			(quest_text("Find a way across") or quest_text("Finish building a bridge across")),
+		task = t.do_orc_chasm,
+	}
+
+	t.visit_highland_lord = {
+		when = quest("There Can Be Only One Topping") and
+			want_lvl_9_quest() and
+			(quest_text("Speak to the Highland Lord") or quest_text("Go see the Highland Lord")),
+		task = {
+			message = "visit highland lord",
+			action = function()
+				get_page("/place.php", { whichplace = "highlands", action = "highlands_dude" })
+				refresh_quest()
+				did_action = not (quest_text("Speak to the Highland Lord") or quest_text("Go see the Highland Lord"))
+			end
+		}
+	}
+
+	t.light_oil_peak = {
+		when = quest("There Can Be Only One Topping") and
+			want_lvl_9_quest() and
+			quest_text("* Oil Peak"),
+		task = t.do_oil_peak,
+	}
+
+	t.light_aboo_peak = {
+		when = quest("There Can Be Only One Topping") and
+			want_lvl_9_quest() and
+			quest_text("* A-boo Peak"),
+		task = t.do_aboo_peak,
+	}
+
+	t.light_twin_peak = {
+		when = quest("There Can Be Only One Topping") and
+			want_lvl_9_quest() and
+			quest_text("* Twin Peak"),
+		task = t.do_twin_peak,
+	}
+
+	t.tasklist_there_can_be_only_one_topping = {
+		t.manual_lvl_9_quest,
+		t.find_way_across_bridge,
+		t.visit_highland_lord,
+		t.light_oil_peak,
+		t.light_aboo_peak,
+		t.light_twin_peak,
+	}
 
 	t.do_daily_dungeon = {
 		message = "do daily dungeon",
@@ -929,7 +970,7 @@ mark m_done
 		when = script_want_library_key() and
 			not have_item("Spookyraven library key") and
 			have_item("Spookyraven billiards room key") and
-			drunkenness() <= 12 and drunkenness() >= 5,
+			drunkenness() <= 12 and drunkenness() >= 4,
 		task = {
 			message = "get library key",
 			familiar = "Slimeling",
@@ -1222,6 +1263,351 @@ mark m_done
 			heavyrains_make_train_skill_task("lightning milk", { "Sheet Lightning", "Lightning Strike", "Riding the Lightning" }),
 		}
 	end
+
+	tasks.ns_lair_investigate_contest = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and (quest_text("investigate the weird contest") or quest_text("not yet entered")),
+		task = {
+			message = "sign up for NS lair contest",
+			nobuffing = true,
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_01_contestbooth" })
+				local options = parse_choice_options(result)
+				if options["Enter the Fastest Adventurer contest"] then
+					--...maximize init...
+				elseif options["Enter the Smoothest Adventurer contest"] then
+					--...maximize moxie...
+				elseif options["Enter the Stinkiest Adventurer contest"] then
+					--...maximixe stinky...
+				end
+				print("DEBUG ns contest", tostring(options))
+				did_action = false
+			end,
+		}
+	}
+
+	tasks.ns_lair_defeat_other_entrants = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Defeat the other entrants"),
+		task = {
+			message = "defeat other NS lair contestants",
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower" })
+				for i = 1, 3 do
+					if result:contains("ns_01_crowd" .. i) then
+						result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_01_crowd" .. i })
+						result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", macro_kill_monster)
+						if result:contains([[>You win the fight!<!--WINWINWIN--><]]) then
+							did_action = true
+						end
+						return
+					end
+				end
+			end,
+		}
+	}
+
+	tasks.ns_lair_finish_contest = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("talk to the contest official"),
+		task = {
+			message = "finish NS lair contest",
+			nobuffing = true,
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_01_contestbooth" })
+				did_action = quest_text("Attend your coronation in the courtyard")
+			end,
+		}
+	}
+
+	tasks.ns_lair_attend_coronation = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Attend your coronation in the courtyard"),
+		task = {
+			message = "attend NS lair coronation",
+			nobuffing = true,
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_02_coronation" })
+				did_action = quest_text("Make your way through the treacherous hedge maze")
+			end,
+		}
+	}
+
+	tasks.ns_lair_navigate_hedge_maze = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Make your way through the treacherous hedge maze"),
+		task = {
+			message = "navigate NS hedge maze",
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_03_hedgemaze" })
+				result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", macro_kill_monster, nil, function(advtitle, choicenum, pagetext)
+					print("DEBUG advtitle choicenum", advtitle, choicenum)
+					return "", 1
+				end)
+				did_action = quest_text("Get through the door at the base")
+			end,
+		}
+	}
+
+	tasks.ns_lair_door = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Get through the door at the base"),
+		task = {
+			message = "pass NS lair door",
+			nobuffing = true,
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower_door" })
+				did_action = false
+			end,
+		}
+	}
+
+	local tower_page = nil
+	local function at_tower_level(idx)
+		if not tower_page then
+			tower_page = get_page("/place.php", { whichplace = "nstower" })
+		end
+		return tower_page:contains("Tower Level " .. idx)
+	end
+
+	tasks.ns_lair_wall_of_skin = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Ascend the <") and at_tower_level(1),
+		task = {
+			message = "pass wall of skin",
+			action = function()
+				script.want_familiar("Warbear Drone")
+				script.wear {
+					offhand = first_wearable { "hot plate" },
+					famequip = first_wearable { "ant hoe", "ant pick", "ant pitchfork", "ant rake", "ant sickle" },
+					acc1 = first_wearable { "hippy protest button" },
+					acc2 = first_wearable { "bottle opener belt buckle" },
+				}
+				script.maybe_ensure_buffs { "Spiky Shell", "Jalape&ntilde;o Saucesphere", "Scarysauce", "Psalm of Pointiness" }
+				result, resulturl = get_page("/place.php", { whichplace = "nstower" })
+				did_action = false
+			end,
+		}
+	}
+
+	tasks.ns_lair_wall_of_meat = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and (quest_text("Ascend the <") or quest_text("Defeat the wall of meat")) and at_tower_level(2),
+		task = {
+			message = "pass wall of meat",
+			action = function()
+				script.want_familiar("leprechaun")
+				script.wear {}
+				script.ensure_buffs { "Polka of Plenty", "Disco Leer" }
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_06_monster2" })
+				result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", macro_kill_monster)
+				did_action = advagain
+			end,
+		}
+	}
+
+	tasks.ns_lair_wall_of_bones = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and
+			(quest_text("Ascend the <") or quest_text("Defeat the wall of bones")) and
+			at_tower_level(3) and
+			have_item("electric boning knife"),
+		task = {
+			message = "pass wall of bones",
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_07_monster3" })
+				result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", [[use electric boning knife]])
+				did_action = advagain
+			end,
+		}
+	}
+
+	tasks.ns_lair_get_boning_knife = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and
+			(quest_text("Ascend the <") or quest_text("Defeat the wall of bones")) and
+			at_tower_level(3) and
+			not have_item("electric boning knife"),
+		task = {
+			message = "get electric boning knife",
+			bonus_target = { "noncombat", "item" },
+			action = adventure {
+				zone = "The Castle in the Clouds in the Sky (Ground Floor)",
+				macro_function = macro_kill_monster,
+				noncombats = {
+					["There's No Ability Like Possibility"] = "Go out the Way You Came In",
+					["Putting Off Is Off-Putting"] = "Get out of this Junk",
+					["Huzzah!"] = "Seek the Egress Anon",
+				}
+			}
+		}
+	}
+
+	tasks.ns_lair_tower_mirror = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Continue climbing") and at_tower_level(4),
+		task = {
+			message = "look in tower mirror",
+			action = function()
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_08_monster4" })
+				result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", nil, {
+					["The Mirror in the Tower has the View that is True"] = "Gaze into the mirror...",
+				})
+				did_action = advagain
+			end,
+		}
+	}
+
+	tasks.ns_lair_defeat_shadow = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Continue your ascent") and at_tower_level(5),
+		task = {
+			message = "defeat your shadow",
+			action = function()
+				script.bonus_target { "easy combat" }
+				set_mcd(0)
+				script.want_familiar("Frumious Bandersnatch")
+				script.ensure_buffs { "Go Get 'Em, Tiger!" }
+				script.wear { hat = first_wearable { "double-ice cap" } }
+				local use_garter = "use gauze garter"
+				if have_skill("Ambidextrous Funkslinging") and count_item("gauze garter") >= 8 then
+					script.heal_up()
+					use_garter = "use gauze garter, gauze garter"
+				elseif count_item("gauze garter") >= 8 and (have_item("Rain-Doh indigo cup") or have_item("double-ice cap")) then
+					if maxhp() < 300 then
+						script.wear { hat = first_wearable { "double-ice cap" }, acc1 = first_wearable { "bejeweled pledge pin" }, acc2 = first_wearable { "plastic vampire fangs" }, acc1 = first_wearable { "sphygmomanometer" } }
+					end
+					if maxhp() < 300 then
+						script.maybe_ensure_buffs { "Standard Issue Bravery", "Starry-Eyed", "Puddingskin" }
+					end
+					script.force_heal_up()
+					if hp() < 300 and not have_equipped_item("double-ice cap") then
+						stop "Kill your shadow"
+					end
+				else
+					stop "Kill your shadow"
+				end
+				result, resulturl = get_page("/place.php", { whichplace = "nstower", action = "ns_09_monster5" })
+				result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", [[
+]] .. COMMON_MACROSTUFF_START(20, 5) .. [[
+
+
+]] .. use_garter .. [[
+
+
+if hasskill Saucy Salve
+	cast Saucy Salve
+endif
+
+
+]] .. use_garter .. [[
+
+
+if hascombatitem Rain-Doh indigo cup
+	use Rain-Doh indigo cup
+endif
+
+
+]] .. use_garter .. [[
+
+
+]] .. use_garter .. [[
+
+
+]] .. use_garter .. [[
+
+
+]])
+				did_action = advagain
+			end,
+		}
+	}
+
+	tasks.ns_lair_confront_ns = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Confront the ") and quest_text("Naughty Sorceress"),
+		task = {
+			message = "confront the naughty sorceress",
+			action = function()
+				script.bonus_target { "easy combat" }
+				set_mcd(0)
+				script.want_familiar("Frumious Bandersnatch")
+				script.ensure_buffs { "Go Get 'Em, Tiger!" }
+				did_action = advagain
+			end,
+		}
+	}
+
+	tasks.ns_lair_free_king = {
+		when = quest("The Ultimate Final Epic Conflict of the Ages") and quest_text("Free King Ralph from his prism"),
+		task = {
+			message = "free king ralph",
+			action = function()
+				set_result(get_page("/place.php", { whichplace = "nstower" }))
+				result = add_message_to_page(get_result(), "<p>Finished, free the king!</p>", "Ascension script:")
+				result_status.finished()
+			end,
+		}
+	}
+
+	tasks.tasklist_ns_lair = {
+		tasks.ns_lair_investigate_contest,
+		tasks.ns_lair_defeat_other_entrants,
+		tasks.ns_lair_finish_contest,
+		tasks.ns_lair_attend_coronation,
+		tasks.ns_lair_navigate_hedge_maze,
+		tasks.ns_lair_door,
+		tasks.ns_lair_wall_of_skin,
+		tasks.ns_lair_wall_of_meat,
+		tasks.ns_lair_wall_of_bones,
+		tasks.ns_lair_get_boning_knife,
+		tasks.ns_lair_tower_mirror,
+		tasks.ns_lair_confront_ns,
+		tasks.ns_lair_free_king,
+	}
+
+	local function want_more_ka()
+		for _, skill in ipairs { "Upgraded Legs", "Extra Spleen", "Another Extra Spleen", "Yet Another Extra Spleen", "Replacement Liver", "Replacement Stomach", "Still Another Extra Spleen" } do
+			if not have_skill(skill) then
+				if count_item("Ka coin") >= 30 then
+					stop("TODO: buy skill: " .. skill)
+				end
+				return true
+			end
+		end
+	end
+
+	local function cache_wrapper(f)
+		cached_stuff.cache_wrapper = cached_stuff.cache_wrapper or {}
+		local key = debug.callsitedesc()
+		if cached_stuff.cache_wrapper[key] == nil then
+			cached_stuff.cache_wrapper[key] = f()
+		end
+		return cached_stuff.cache_wrapper[key]
+	end
+
+	tasks.ed_farm_ka_at_government_lab = {
+		when = want_more_ka() and have_skill("Fist of the Mummy") and cache_wrapper(have_conspiracy_island),
+		task = {
+			message = "farm ka at government lab",
+			minmp = 10,
+			equipment = { acc1 = first_wearable { "Personal Ventilation Unit" } },
+			action = adventure {
+				zone = "The Secret Government Laboratory",
+				macro_function = macro_kill_monster,
+			}
+		},
+	}
+
+	tasks.ed_use_map_page = {
+		when = quest_text("Search for the MacGuffin in the Warehouse") and
+			not have_item("Holy MacGuffin") and
+			have_item("warehouse map page") and
+			have_item("warehouse inventory page"),
+		task = maketask_use_item("warehouse map page"),
+	}
+
+	tasks.ed_search_warehouse = {
+		when = quest_text("Search for the MacGuffin in the Warehouse") and
+			not have_item("Holy MacGuffin"),
+		task = {
+			message = "search for macguffin",
+			minmp = 35,
+			action = adventure {
+				zone = "The Secret Council Warehouse",
+				macro_function = macro_kill_monster,
+			}
+		},
+	}
+
+	tasks.tasklist_actually_ed_the_undying = { tasks.ed_farm_ka_at_government_lab, tasks.ed_use_map_page, tasks.ed_search_warehouse }
 
 	return t
 end

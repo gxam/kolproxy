@@ -457,9 +457,8 @@ local picked_up_free_pulls = false
 add_ascension_assistance(function() return not picked_up_free_pulls end, function()
 	async_post_page("/campground.php", { action = "telescopelow" })
 	async_post_page("/campground.php", { action = "workshed" })
-	-- TODO: Only at level 1?
 	if not have_item("Clan VIP Lounge key") then
-		freepull_item("Clan VIP Lounge key")
+		xx = freepull_item("Clan VIP Lounge key")
 		freepull_item("cursed microwave")
 		freepull_item("cursed pony keg")
 	end
@@ -503,6 +502,8 @@ add_use_item_ascension_assistance("astral six-pack")
 add_use_item_ascension_assistance("carton of astral energy drinks")
 
 add_use_item_ascension_assistance("telegram from Lady Spookyraven")
+add_use_item_ascension_assistance("Letter for Melvign the Gnome")
+add_use_item_ascension_assistance("letter to Ed the Undying")
 
 add_use_item_ascension_assistance("evil eye")
 
@@ -731,7 +732,7 @@ add_interceptor("__IGNORE__ use item: Degrassi Knoll shopping list", function()
 						if name == "meat stack" then
 							async_get_page("/inventory.php", { quantity = 1, action = "makestuff", pwd = params.pwd, whichitem = get_itemid(name), ajax = 1 })
 						else
-							async_get_page("/store.php", { phash = params.pwd, buying = 1, whichitem = get_itemid(name), howmany = 1, whichstore = "5", ajax = 1, action = "buyitem" })
+							buy_item(name)
 						end
 					end
 					for x, name in pairs(meatcar.order) do

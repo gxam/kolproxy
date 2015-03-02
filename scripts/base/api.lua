@@ -57,22 +57,24 @@ function setup_functions()
 		end
 
 		local player_classid_names = {
-			"Seal Clubber",
-			"Turtle Tamer",
-			"Pastamancer",
-			"Sauceror",
-			"Disco Bandit",
-			"Accordion Thief",
-			nil, nil, nil, nil,
-			"Avatar of Boris",
-			"Zombie Master",
-			nil,
-			"Avatar of Jarlsberg",
-			"Avatar of Sneaky Pete",
+			"Seal Clubber", -- 1
+			"Turtle Tamer", -- 2
+			"Pastamancer", -- 3
+			"Sauceror", -- 4
+			"Disco Bandit", -- 5
+			"Accordion Thief", -- 6
+			nil, nil, nil, nil, -- 7, 8, 9, 10
+			"Avatar of Boris", -- 11
+			"Zombie Master", -- 12
+			nil, -- 13
+			"Avatar of Jarlsberg", -- 14
+			"Avatar of Sneaky Pete", -- 15
+			nil, -- 16
+			"Ed", -- 17
 		}
 		function classid() return tonumber(status().class) end
-		function playerclassname()
-			return player_classid_names[classid()] or ("{classid:" .. classid() .. "}")
+		function maybe_playerclassname()
+			return player_classid_names[classid()]
 		end
 		function playerclass(check)
 			for i = 1, 100 do
@@ -87,12 +89,12 @@ function setup_functions()
 
 		-- WARNING: Values can be out of date unless you load charpane.php. This is a KoL/CDM bug.
 
-		local function __get_mainstat()
+		local function get_mainstat()
 			-- WORKAROUND: Missing from API. Use correct values for known classes, otherwise guess that it's the highest one
 			local cid = classid()
 			if cid == 1 or cid == 2 or cid == 11 or cid == 12 then
 				return "Muscle"
-			elseif cid == 3 or cid == 4 or cid == 14 then
+			elseif cid == 3 or cid == 4 or cid == 14 or cid == 17 then
 				return "Mysticality"
 			elseif cid == 5 or cid == 6 or cid == 15 then
 				return "Moxie"
@@ -107,16 +109,11 @@ function setup_functions()
 			end
 		end
 
-		function get_mainstat()
-			print([[WARNING: code such as get_mainstat() == "Muscle" should be replaced by mainstat_type("Muscle")]])
-			return __get_mainstat()
-		end
-
 		function mainstat_type(which)
 			if which then
-				return __get_mainstat() == which
+				return get_mainstat() == which
 			else
-				return __get_mainstat()
+				return get_mainstat()
 			end
 		end
 

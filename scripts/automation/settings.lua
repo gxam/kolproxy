@@ -133,6 +133,8 @@ function get_ascension_automation_settings(want_bonus)
 				"cornuthaum",
 				"Knob Goblin elite helm",
 				"mariachi hat",
+				"Hollandaise helmet",
+				"ravioli hat",
 				"helmet turtle",
 				"snorkel",
 			},
@@ -145,6 +147,7 @@ function get_ascension_automation_settings(want_bonus)
 				"Misty Robe",
 				"Rain-Doh red wings",
 				"Camp Scout backpack",
+				"Time Bandit Time Towel",
 				"barskin cloak",
 				"giant gym membership card",
 			},
@@ -292,6 +295,7 @@ function get_ascension_automation_settings(want_bonus)
 			"Shakespeare's Sister's Accordion",
 			"right bear arm",
 			{ name = "Staff of the Headmaster's Victuals", check = function() return not want_bonus.not_casting_spells end },
+			7961, -- "Staff of Ed", pathed version
 			"alarm accordion",
 			"peace accordion",
 			"Squeezebox of the Ages",
@@ -338,7 +342,7 @@ function get_ascension_automation_settings(want_bonus)
 	end
 	function tbl.canwear_itemname(x)
 		local itemname = nil
-		if type(x) == "string" then
+		if type(x) == "string" or type(x) == "number" then
 			if have_item(x) and can_equip_item(x) then
 				itemname = x
 			end

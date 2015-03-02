@@ -137,11 +137,20 @@ end
 function use_item(name, amount, noajax)
 	print_debug("  using", name, amount or "")
 	local ajax = (not noajax) and 1 or nil
-	if amount then
+	local idata = maybe_get_itemdata(name)
+	local is_spleen = idata and (tonumber(idata.spleen) or 0) > 0
+	if is_spleen then
+		return use_spleen_item(name, amount, noajax)
+	elseif amount then
 		return async_get_page("/multiuse.php", { pwd = session.pwd, whichitem = get_itemid(name), ajax = ajax, quantity = amount, action = "useitem" })
 	else
 		return async_get_page("/inv_use.php", { pwd = session.pwd, whichitem = get_itemid(name), ajax = ajax })
 	end
+end
+
+function use_spleen_item(name, amount, noajax)
+	local ajax = (not noajax) and 1 or nil
+	return async_get_page("/inv_spleen.php", { pwd = session.pwd, whichitem = get_itemid(name), ajax = ajax, quantity = amount or 1 })
 end
 
 function use_item_noajax(name, amount)

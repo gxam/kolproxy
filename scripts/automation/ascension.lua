@@ -53,6 +53,12 @@ function print_ascensiondebug(...)
 	end
 end
 
+result_status = {
+	finished = function()
+		finished = true
+	end
+}
+
 local function automate_day(whichday)
 	reset_error_trace_steps()
 	finished = false
@@ -80,6 +86,8 @@ local function automate_day(whichday)
 			mpstr = string.format("%s horde", horde_size())
 		elseif ascensionpath("Avatar of Sneaky Pete") then
 			mpstr = mpstr .. ", " .. petelove() - petehate() .. " love"
+		elseif ascensionpath("Actually Ed the Undying") then
+			mpstr = mpstr .. ", " .. count_item("Ka coin") .. " Ka"
 		end
 		local formatted = string.format("[%s] %s (level %s.%02d, %s turns remaining, %s full, %s drunk, %s spleen, %s meat, %s / %s HP, %s)", turnsthisrun(), tostring(msg), level(), level_progress() * 100, advs(), fullness(), drunkenness(), spleen(), meat(), hp(), maxhp(), mpstr)
 		print(formatted)
@@ -446,6 +454,7 @@ endif
 		cached_stuff.gotten_guild_challenge = true
 	end
 
+	cached_stuff.currently_checked.kgs_available = cached_stuff.currently_checked.kgs_available or cached_stuff.remember_kgs_available
 	if cached_stuff.currently_checked.kgs_available == nil then
 		cached_stuff.currently_checked.kgs_available = check_buying_from_knob_dispensary()
 	end
@@ -570,9 +579,7 @@ endif
 			error("Error adding task! (" .. tostring(t.message) .. ")")
 		end
 
-		local dgi = debug.getinfo(2)
-		local taskid = dgi.short_src .. ":" .. dgi.currentline
-
+		local taskid = debug.callsitedesc()
 		if not skipping_taskids[taskid] then
 			taskid_lookup[t] = taskid
 			table.insert(tasks_list, t)
@@ -585,17 +592,7 @@ endif
 		end
 	end
 
-	local DD_keys = countif("Boris's key") + countif("Jarlsberg's key") + countif("Sneaky Pete's key") + count_item("fat loot token")
-	local real_DD_keys = DD_keys
-	if cached_stuff.completed_daily_dungeon then
-		DD_keys = 100
-	elseif script_want_2_day_SCHR() then
-	elseif level() >= 6 and estimate_max_fullness() - fullness() < 4 then
-	elseif not ascensionstatus("Hardcore") then
-		DD_keys = 100
-	end
-
-	mmj_available = cached_stuff.mox_guild_is_open and (classid() == 3 or classid() == 4 or (classid() == 6 and level() >= 9)) -- TODO: fix
+	mmj_available = cached_stuff.mox_guild_is_open and (playerclass("Pastamancer") or playerclass("Sauceror") or (playerclass("Accordion Thief") and level() >= 9)) -- TODO: fix
 
 	reset_macro_target()
 	script.bonus_target {}
@@ -1800,7 +1797,7 @@ endif
 	end
 
 	add_task {
-		when = not have_item("digital key") and count_item("white pixel") + math.min(count_item("red pixel"), count_item("green pixel"), count_item("blue pixel")) >= 30,
+		when = want_digital_key() and count_item("white pixel") + math.min(count_item("red pixel"), count_item("green pixel"), count_item("blue pixel")) >= 30,
 		task = tasks.make_digital_key,
 	}
 
@@ -1970,6 +1967,9 @@ endif
 		want_softcore_item("Camp Scout backpack")
 	end
 	want_softcore_item_oneof { "Jekyllin hide belt", "Mr. Accessory Jr.", "over-the-shoulder Folder Holder", "astral mask" }
+	if can_wear_weapons() and mainstat_type("Mysticality") then
+		want_softcore_item_oneof { "Jarlsberg's pan (Cosmic portal mode)", "Jarlsberg's pan" }
+	end
 	if can_wear_weapons() and not have_item("Jarlsberg's pan (Cosmic portal mode)") and not have_item("Jarlsberg's pan") then
 		want_softcore_item("Operation Patriot Shield")
 	end
@@ -2057,91 +2057,6 @@ endif
 			end
 		}
 	}
-
-	-- TODO: make into separate tasks
-	if quest("The Final Ultimate Epic Final Conflict") and quest_text("You've come to an odd junction in the cave leading to the Sorceress' Lair") then
-		if not have_item("stone tablet (Really Evil Rhythm)") and have_item("skeleton key") and quest_text("solve a really convoluted and contrived puzzle involving a cloud of gas") then
-			inform "do skeleton key"
-			script.maybe_ensure_buffs { "A Few Extra Pounds" }
-			while true do
-				if hp() <= 60 and hp() < maxhp() then
-					script.heal_up()
-				end
-				local before_hp = hp()
-				async_post_page("/lair2.php", { prepreaction = "skel" })
-				if have_item("stone tablet (Really Evil Rhythm)") or hp() >= before_hp then
-					break
-				end
-			end
-			if have_item("stone tablet (Really Evil Rhythm)") then
-				did_action = true
-			end
-		elseif countif("Boris's key") + countif("Jarlsberg's key") + countif("Sneaky Pete's key") < 3 and not have_item("makeshift SCUBA gear") then
-			-- TODO: if not enough fat loot tokens, and no wand, hmm(?)
-			inform "trading for legend keys"
-			for _, x in ipairs { "Boris's key", "Jarlsberg's key", "Sneaky Pete's key" } do
-				if not have_item(x) then
-					shop_buy_item(x, "damachine")
-				end
-			end
-			if countif("Boris's key") + countif("Jarlsberg's key") + countif("Sneaky Pete's key") >= 3 then
-				did_action = true
-			end
-		else
-			inform "pass lair statues"
-			if challenge == "fist" then
-				script.ensure_buffs { "Earthen Fist" }
-			end
-			while not have_item("stolen accordion") do
-				result, resulturl, advagain = script.buy_use_chewing_gum()
-				if not advagain then
-					critical "Failed to use chewing gum"
-				end
-			end
-
-			if ascensionstatus("Softcore") then
-				local maximum_lair_items_missing = 6
-				if requires_wand_of_nagamar() and not have_wand_or_parts() then
-					maximum_lair_items_missing = maximum_lair_items_missing + 1
-				end
-				if not have_item("star hat") then
-					maximum_lair_items_missing = maximum_lair_items_missing + 1
-				end
-				if can_wear_weapons() and not have_item("star crossbow") and not have_item("star staff") and not have_item("star sword") then
-					maximum_lair_items_missing = maximum_lair_items_missing + 1
-				end
-				for i = 1, 6 do
-					local item = get_lair_tower_monster_items()[i]
-					if item and have_item(item) then
-						maximum_lair_items_missing = maximum_lair_items_missing - 1
-					end
-				end
-				print("DEBUG pulls missing", pullsleft(), maximum_lair_items_missing)
-				if (pullsleft() or 0) >= maximum_lair_items_missing and (pullsleft() or 0) >= 3 then
-					pull_in_softcore("star hat")
-					if can_wear_weapons() and not have_item("star crossbow") and not have_item("star staff") and not have_item("star sword") then
-						pull_in_softcore("star crossbow")
-					end
-				end
-			end
-			result, resulturl = get_page("/lair2.php", { action = "statues" })
-			local missing_stuff = automate_lair_statues(result)
-			if missing_stuff and table.concat(missing_stuff, ", "):contains("smith a stone banjo") then
-				automate_smithing_stone_banjo()
-				result, resulturl = get_page("/lair2.php", { action = "statues" })
-				missing_stuff = automate_lair_statues(result)
-			end
-			if missing_stuff then
-				result, resulturl = get_page("/lair2.php")
-				result = add_message_to_page(get_result(), "TODO: finish lair<br><br>" .. table.concat(missing_stuff, ", "), nil, "darkorange")
-				did_action = false
-				finished = true
-			else
-				did_action = true
-			end
-		end
-		return result, resulturl, did_action
-	end
 
 	add_task {
 		when = challenge == "boris" and
@@ -2324,7 +2239,8 @@ endif
 	local function ready_to_end_day()
 		return level() >= 5 and
 			(level() < 13 or quest("Make War, Not... Oh, Wait") or quest("The Rain on the Plains is Mainly Garbage") or quest_text("Quest for the Holy MacGuffin")) and
-			advs() <= 20
+			advs() <= 20 and
+			turnsthisrun() >= 120
 	end
 
 	local function want_molotov_soda()
@@ -2486,6 +2402,24 @@ endif
 	add_task(tasks.check_hidden_temple)
 	add_task(tasks.use_spooky_temple_map)
 
+	add_task {
+		when = have_item("rock band flyers") and
+			quest("Make War, Not... Oh, Wait") and
+			basemoxie() >= 70 and
+			basemysticality() >= 70 and
+			have_frat_war_outfit() and
+			(ascension["zone.island.frat arena flyerML"] or 0) >= 11000,
+		task = {
+			message = "turn in rock band flyers",
+			nobuffing = true,
+			action = function()
+				script.wear { hat = "beer helmet", pants = "distressed denim pants", acc3 = "bejeweled pledge pin" }
+				result, resulturl = get_page("/bigisland.php", { place = "concert" })
+				did_action = not have_item("rock band flyers")
+			end
+		}
+	}
+
 	-- start of turn-spending things
 
 	local function timer_buff_running_out()
@@ -2548,6 +2482,17 @@ endif
 	}
 
 	add_task {
+		when = script.semirare_within_N_turns(1) and not ascension_script_option("automate semi-rares"),
+		task = {
+			message = "possible semirare next turn",
+			nobuffing = true,
+			action = function()
+				stop "Pick up semirare manually (or enable semi-rare automation in ascension script options)"
+			end
+		}
+	}
+
+	add_task {
 		when = script.semirare_within_N_turns(1),
 		task = {
 			message = "picking up semirare",
@@ -2589,6 +2534,9 @@ endif
 		when = AT_song_duration() > 0 and level() < 5 and (buffturns("The Moxious Madrigal") < 10 or buffturns("The Magical Mojomuscular Melody") < 10) and have_skill("The Moxious Madrigal") and have_skill("The Magical Mojomuscular Melody"),
 		task = tasks.extend_tmm_and_mojo,
 	}
+
+	add_tasklist(tasks.tasklist_ns_lair)
+	add_tasklist(tasks.tasklist_actually_ed_the_undying)
 
 	local function have_check_mirror_intrinsic()
 		for _, i in ipairs { "Slicked-Back Do", "Pompadour", "Cowlick", "Fauxhawk" } do
@@ -2874,7 +2822,7 @@ endif
 			challenge == "boris" and
 			unlocked_beach() and
 			not unlocked_island() and
-			turns_to_next_sr >= 3 and
+			not script.semirare_within_N_turns(3) and
 			meat() >= 1000 and
 			(have_item("Clancy's lute") or clancy_instrumentid() == 3),
 		f = script.get_dinghy,
@@ -2971,6 +2919,8 @@ endif
 			inform("vamping out: " .. mainstat_type())
 			vamp_out(mainstat_type())
 			did_action = true
+		elseif have_chateau_mantegna() then
+			stop "TODO: rest at mantegna"
 		else
 			use_dancecard()
 			return do_powerleveling_sub()
@@ -2998,7 +2948,7 @@ endif
 	end
 
 	add_task {
-		when = not have_item("digital key") and trailed == "Blooper",
+		when = want_digital_key() and trailed == "Blooper",
 		task = tasks.do_8bit_realm,
 	}
 
@@ -3248,6 +3198,8 @@ endif
 			after_action = function()
 				cached_stuff.currently_checked.kgs_available = nil
 				did_action = get_result():contains("FARQUAR")
+				cached_stuff.currently_checked.kgs_available = true -- DEBUG HACK REMOVE ME!
+				cached_stuff.remember_kgs_available = true -- DEBUG HACK REMOVE ME!
 			end
 		}
 	}
@@ -3926,7 +3878,7 @@ endif
 	}
 
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			ascensionstatus("Hardcore") and
 			not script.have_familiar("Angry Jung Man") and
 			have_skill("Transcendent Olfaction") and
@@ -3965,7 +3917,7 @@ endif
 	}
 
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			ascensionstatus("Hardcore") and
 			not script.have_familiar("Angry Jung Man") and
 			have_item("Staff of the Standalone Cheese") and
@@ -4035,7 +3987,7 @@ endif
 
 	local pixel_count = count_item("white pixel") + math.min(count_item("red pixel"), count_item("green pixel"), count_item("blue pixel"))
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			cached_stuff.campground_psychoses == "mystic" and
 			pixel_count < 30,
 		task = {
@@ -4068,7 +4020,7 @@ endif
 	}
 
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			(have_item("psychoanalytic jar") or have_item("jar of psychoses (The Crackpot Mystic)")) and
 			advs() >= 40 and
 			not trailed,
@@ -4156,7 +4108,7 @@ endif
 	}
 
 	add_task {
-		when = DD_keys < 3 and (have_gelatinous_cubeling_items() or not script.have_familiar("Gelatinous Cubeling")) and not cached_stuff.done_daily_dungeon,
+		when = want_legend_keys() and (have_gelatinous_cubeling_items() or not script.have_familiar("Gelatinous Cubeling")) and not cached_stuff.done_daily_dungeon,
 		task = tasks.do_daily_dungeon,
 	}
 
@@ -4200,7 +4152,7 @@ endif
 			prereq = want_shore() and
 				not unlocked_island() and
 				unlocked_beach() and
-				turns_to_next_sr >= 5 and
+				not script.semirare_within_N_turns(5) and
 				not have_frat_war_outfit(),
 			f = script.get_dinghy,
 			message = "get dinghy",
@@ -4329,7 +4281,7 @@ endif
 	add_task {
 		prereq = want_shore() and
 			not unlocked_island() and
-			turns_to_next_sr >= 5 and
+			not script.semirare_within_N_turns(3) and
 			meat() >= 1000 and
 			unlocked_beach(),
 		f = script.get_dinghy,
@@ -4509,12 +4461,12 @@ endif
 	add_task(tasks.unlock_hidden_temple)
 
 	add_task {
-		when = DD_keys < 3 and not cached_stuff.done_daily_dungeon,
+		when = want_legend_keys() and not cached_stuff.done_daily_dungeon,
 		task = tasks.do_daily_dungeon,
 	}
 
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			ascensionstatus("Hardcore") and
 			not script.have_familiar("Angry Jung Man") and
 			not trailed,
@@ -4524,12 +4476,6 @@ endif
 	add_task {
 		when = quest_text("wants to dance again, but first she needs"),
 		task = tasks.lady_spookyraven_dance,
-	}
-
-	add_task {
-		prereq = level() < 10,
-		f = do_powerleveling,
-		message = "level to 10",
 	}
 
 	add_task {
@@ -4582,21 +4528,6 @@ endif
 	}
 
 	add_task {
-		prereq =
-			count_item("star chart") < 3 and
-			(can_wear_weapons() or count_item("star chart") < 2) and
-			not have_item("Richard's star key") and
-			(not trailed or trailed == "Astronomer") and
-			have_item("steam-powered model rocketship") and ascensionstatus() == "Hardcore",
-		f = function()
-			if have_item("BitterSweetTarts") and not have_buff("Full of Wist") then
-				use_item("BitterSweetTarts")
-			end
-			script.go("do hits astronomers", 83, make_cannonsniff_macro("Astronomer"), nil, { "Spirit of Peppermint", "Fat Leon's Phat Loot Lyric", "Heavy Petting", "Peeled Eyeballs", "Leash of Linguini", "Empathy" }, "Slimeling", 60, { olfact = "Astronomer" })
-		end,
-	}
-
-	add_task {
 		when = not ascensionstatus("Aftercore") and
 			level() >= 10 and
 			requires_wand_of_nagamar() and
@@ -4631,7 +4562,7 @@ endif
 	}
 
 	add_task {
-		when = not have_item("digital key") and
+		when = want_digital_key() and
 			ascensionstatus("Softcore") and
 			not script.have_familiar("Angry Jung Man") and
 			not cached_stuff.tried_pulling_mystic_jar and
@@ -4655,54 +4586,7 @@ endif
 		}
 	}
 
-	add_task {
-		when = ascensionstatus("Softcore") and
-			not ascensionpath("Bees Hate You") and
-			not cached_stuff.tried_pulling_large_box and
-			level() >= 10 and
-			turnsthisrun() >= 300 and
-			real_DD_keys >= 2 and
-			can_ensure_clover(),
-		task = {
-			message = "considering pulling large box",
-			nobuffing = true,
-			action = function()
-				cached_stuff.tried_pulling_large_box = true
-				local want = true
-				local dodstatus = get_dod_potion_status()
-				if next(dodstatus) then
-					want = false
-				end
-				for _, x in ipairs(dod_potion_types) do
-					if have_item(x) then
-						want = false
-					end
-				end
-				if have_item("small box") or have_item("large box") or have_item("blessed large box") then
-					want = false
-				end
-				if want and (pullsleft() or 0) >= 5 and ensure_clover() then
-					pull_in_softcore("large box")
-					meatpaste_items("large box", "ten-leaf clover")
-					use_item("blessed large box")
-					for _, x in ipairs(dod_potion_types) do
-						if have_item(x) then
-							did_action = true
-						end
-					end
-				else
-					print("  skipping attempt")
-					did_action = true
-				end
-			end
-		}
-	}
-
-	add_task {
-		prereq = level() < 11,
-		f = do_powerleveling,
-		message = "level to 11",
-	}
+	add_tasklist(tasks.tasklist_there_can_be_only_one_topping)
 
 	add_task { prereq = challenge == "fist" and whichday == 3 and advs() < 100, f = function()
 		if drunkenness() < estimate_max_safe_drunkenness() then
@@ -4730,7 +4614,7 @@ endif
 	}
 
 	add_task {
-		when = ascensionstatus() ~= "Hardcore" and quest("Make War, Not... Oh, Wait") and not have_frat_war_outfit(),
+		when = not ascensionstatus("Hardcore") and quest("Make War, Not... Oh, Wait") and not have_frat_war_outfit(),
 		task = {
 			message = "pull frat war outfit",
 			action = function()
@@ -4793,12 +4677,12 @@ endif
 	}
 
 	add_task {
-		prereq = quest_text("Your first step is to find the Black Market"),
+		prereq = quest_text("the Black Market"),
 		f = script.find_black_market,
 	}
 
 	add_task {
-		prereq = quest_text("now to hit the Travel Agency and get yourself on a slow boat"),
+		prereq = quest_text("now to hit the Travel Agency and get yourself on a slow boat") or quest("Black to the Future"),
 		f = script.get_macguffin_diary,
 	}
 
@@ -4815,6 +4699,18 @@ endif
 	add_task {
 		prereq = quest_text("now the Council wants you to finish it") and not have_item("rock band flyers") and not cached_stuff.got_flyers,
 		f = script.get_flyers,
+	}
+
+	add_task {
+		prereq = level() < 10,
+		f = do_powerleveling,
+		message = "level to 10",
+	}
+
+	add_task {
+		prereq = level() < 11,
+		f = do_powerleveling,
+		message = "level to 11",
 	}
 
 	add_task {
@@ -4850,7 +4746,7 @@ endif
 		when = quest("Just Deserts") and
 			can_wear_weapons() and
 			not have_item("UV-resistant compass") and
-			turns_to_next_sr >= 3,
+			not script.semirare_within_N_turns(3),
 		task = tasks.get_uv_compass,
 	}
 
@@ -4881,13 +4777,8 @@ endif
 	}
 
 	add_task {
-		prereq = quest("Gotta Worship Them All") and turns_to_next_sr >= 3,
+		prereq = quest("Gotta Worship Them All") and not script.semirare_within_N_turns(3),
 		f = script.do_gotta_worship_them_all,
-	}
-
-	add_task {
-		when = quest("There Can Be Only One Topping") and (level() >= 11 and not quest_text("Your first step is to find the Black Market")),
-		task = tasks.there_can_be_only_one_topping,
 	}
 
 	add_task {
@@ -4901,6 +4792,11 @@ endif
 				did_action = true
 			end
 		end,
+	}
+
+	add_task {
+		prereq = not have_item("Talisman o' Nam"),
+		f = script.do_never_odd_or_even_quest,
 	}
 
 	add_task {
@@ -4952,28 +4848,15 @@ endif
 	}
 
 	add_task {
-		prereq = not have_item("Richard's star key") and
-			trailed ~= "Astronomer" and
+		prereq = want_star_key() and
 			ascensionstatus("Hardcore"),
 		f = script.make_star_key,
 	}
 
--- 	add_task {
--- 		prereq = not (
--- 			have_item("pine wand") or
--- 			have_item("ebony wand") or
--- 			have_item("hexagonal wand") or
--- 			have_item("aluminum wand") or
--- 			have_item("marble wand")
--- 		) and meat() >= 5000 and challenge ~= "fist",
--- 		f = script.get_dod_wand,
--- 	}
-
 	add_task {
-		prereq = not have_item("Richard's star key") and
-			have_item("steam-powered model rocketship") and
-			ascensionstatus("Softcore"),
-		f = script.make_star_key_only,
+		prereq = want_star_key() and
+			have_item("steam-powered model rocketship"),
+		f = script.make_star_key,
 	}
 
 	add_task {
@@ -4985,239 +4868,22 @@ endif
 		message = "trapper quest",
 	}
 
+	add_task {
+		prereq = level() < 12,
+		f = do_powerleveling,
+		message = "level to 12",
+	}
+
+	add_task {
+		prereq = level() < 13,
+		f = do_powerleveling,
+		message = "level to 13",
+	}
+
 	add_task { prereq = true, f = function()
 		if ((advs() < 50 and turnsthisrun() + advs() < 650) or (advs() < 10)) and fullness() >= 12 and drunkenness() >= estimate_max_safe_drunkenness() then
 			stop "TODO: end of day 4. (pvp,) overdrink"
-		elseif level() < 13 then
-			if not ascensionstatus("Hardcore") then
-				stop "Level to 13."
-			end
-			inform "level to 13"
-			if count_item("disassembled clover") >= 3 then -- TODO: uncloset and trade them as well
-				use_item("disassembled clover")
-			end
-			do_powerleveling()
-		elseif not have_item("huge mirror shard") then
-			local lairpt = get_page("/lair1.php", { action = "gates" })
-			local dapt = get_page("/da.php")
-			if dapt:contains("The Enormous Greater-Than Sign") and not lairpt:contains("Gate that is Not a Gate") and lairpt:contains("arcane inscription in front of the gates") and ascensionstatus("Hardcore") then
-				if have_item("plus sign") and meat() < 1000 then
-					stop "Need 1k meat for oracle"
-				end
-				script.bonus_target { "noncombat" }
-				script.go("do > sign", 226, macro_noodlecannon, {}, { "Smooth Movements", "The Sonata of Sneakiness", "Fat Leon's Phat Loot Lyric", "Spirit of Garlic" }, "Slimeling", 25, { choice_function = function(advtitle, choicenum)
-					if advtitle == "Typographical Clutter" then
-						if not have_item("plus sign") then
-							return "The big apostrophe"
-						else
-							return "The upper-case Q"
-						end
-					end
-				end, finalcheck = function()
-						if meat() < 1000 then
-							stop "Need 1k meat for oracle"
-						end
-					end
-				})
-			else
-				inform "do lair entrance"
-				local pt, pturl = get_page("/lair1.php", { action = "gates" })
-				if pt:contains([[value="mirror"]]) then
-					inform "break mirror"
-					set_equipment {}
-					result, resulturl = get_page("/lair1.php", { action = "mirror" })
-					script.wear {}
-					did_action = result:contains("huge mirror shard")
-					return
-				end
-				local dod_tbl, unknown_potions, unknown_effects = get_dod_potion_status()
-				local dod_reverse = {}
-				for a, b in pairs(dod_tbl) do
-					dod_reverse[b] = a
-				end
-				local got_dod_part = true
-				local got_other_parts = true
-				local know_dod_potion = false
-				local touse_items = {}
-				local need_teleportitis = false
-				for a, b in pairs(lair_gateitems) do
-					if pt:contains(a) then
-						local needitem = b.item or dod_reverse[b.potion]
-						if b.potion and dod_reverse[b.potion] then
-							know_dod_potion = true
-						end
-						if b.effect == "Sugar Rush" then
-							needitem = get_sugar_rush_item()
-						end
-						if b.effect == "Teleportitis" then
-							need_teleportitis = true
-						end
-						local got = false
-						if have_buff(b.effect) then
-							got = true
-						elseif needitem and moonsign_area("Gnomish Gnomad Camp") and not have_item(needitem) then
-							store_buy_item(needitem, "n")
-						elseif needitem and not have_item(needitem) and ascensionstatus("Softcore") and (pullsleft() or 0) >= 5 then
-							-- TODO: clover for gum instead of pulling
-							pull_in_softcore(needitem)
-						end
-						if not got and needitem and have_item(needitem) then
-							touse_items[needitem] = tostring(b.effect)
-							got = true
-						end
-						if not got and needitem and needitem:contains("chewing gum") and not moonsign_area("Gnomish Gnomad Camp") and not have_item("pack of chewing gum") and count_item("disassembled clover") >= 2 and ensure_clover() then
-							run_task {
-								message = "clover for gum",
-								nobuffing = true,
-								action = adventure {
-									zone = "South of the Border",
-								}
-							}
-							use_item("pack of chewing gum")()
-							did_action = have_item(needitem)
-							return
-						end
-						if not got then
-							if b.potion then
-								got_dod_part = false
-							else
-								got_other_parts = false
-							end
-						end
-						print("Need", b.effect, needitem, got, b.potion)
-					end
-				end
-				if got_other_parts and got_dod_part then
-					if not need_teleportitis or count_item("soft green echo eyedrop antidote") >= 2 then
-						for x, y in pairs(touse_items) do
-							use_item(x)()
-							did_action = have_buff(y)
-							break
-						end
-					end
-				elseif got_other_parts and not got_dod_part and not know_dod_potion and dod_reverse["booze"] then
-					if dod_reverse["teleportation"] or have_item("soft green echo eyedrop antidote") then
-						for _, x in ipairs(unknown_potions) do
-							if have_item(x) then
-								use_item(x)()
-								did_action = get_dod_potion_status()[x] ~= nil
-								break
-							end
-						end
-					end
-				end
-				if not did_action and got_other_parts and not got_dod_part then
-					if need_teleportitis then
-						run_task {
-							message = "get teleportitis",
-							bonus_target = { "noncombat" },
-							action = adventure {
-								zone = "The Enormous Greater-Than Sign",
-								macro_function = macro_noodlecannon,
-								noncombats = {
-									["Typographical Clutter"] = "The upper-case Q",
-								},
-							}
-						}
-					elseif not know_dod_potion and ascensionstatus("Hardcore") and ascensionpath("Avatar of Sneaky Pete") then
-						if dod_reverse["booze"] or drunkenness() + 3 <= estimate_max_safe_drunkenness() then
-							for _, x in ipairs(unknown_potions) do
-								if have_item(x) then
-									use_item(x)()
-									did_action = get_dod_potion_status()[x] ~= nil
-									break
-								end
-							end
-						end
-						local function have_all_potions()
-							for _, x in ipairs(dod_potion_types) do
-								if not have_item(x) then
-									return false
-								end
-							end
-							return true
-						end
-						if not did_action and not have_all_potions() then
-							if have_item("large box") and ensure_clover() then
-								meatpaste_items("large box", "ten-leaf clover")
-								use_item("blessed large box")
-								did_action = have_all_potions()
-							elseif can_ensure_clover() then
-								run_task {
-									message = "farm large box",
-									bonus_target = { "item", "extraitem", "combat" },
-									action = adventure {
-										zone = "The Dungeons of Doom",
-										macro_function = macro_noodlecannon,
-										noncombats = {
-											["Ouch!  You bump into a door!"] = "Buy what appears to be some sort of cloak (5,000 Meat)",
-										},
-									}
-								}
-							end
-						end
-					end
-				end
-				result = add_message_to_page(pt, "Do lair gates, then run script again", nil, "darkorange")
-				resulturl = pturl
-				finished = not did_action
-			end
 		else
-			-- TODO: Make it so we can do one level at a time, not all 3 at once?
-			local pt, pturl = get_page("/lair3.php")
-			if not have_item("hair spray") then
-				store_buy_item("hair spray", "m")
-			end
-			if pt:contains("lair4.php") then
-				local itemsneeded = session["zone.lair.itemsneeded"] or {}
-				local maximum_tower_items_missing = 6
-				if requires_wand_of_nagamar() and not have_wand_or_parts() then
-					maximum_tower_items_missing = maximum_tower_items_missing + 1
-				end
-				for i = 1, 6 do
-					local item = get_lair_tower_monster_items()[i]
-					if item and have_item(item) then
-						maximum_tower_items_missing = maximum_tower_items_missing - 1
-					end
-				end
-				-- TODO: don't pull for levels you've already passed
-				if ascensionstatus("Softcore") and (pullsleft() or 0) >= maximum_tower_items_missing + 1 then
-					for i = 1, 6 do
-						local item = get_lair_tower_monster_items()[i]
-						if item and not have_item(item) then
-							pull_in_softcore(item)
-						end
-					end
-				end
-				local function check_levels(lvls)
-					local allok = true
-					for _, level in ipairs(lvls) do
-						local thisok = false
-						local item = get_lair_tower_monster_items()[level]
-						if item then
-							if have_item(item) then
-								print("have lair", level, item)
-								thisok = true
-							else
-								print("missing lair", level, item)
-							end
-						end
-						if not thisok then
-							allok = false
-						end
-					end
-					return allok
-				end
-				local function make_tower_macro(level)
-					return [[
-
-use ]] .. get_lair_tower_monster_items()[level] .. [[
-
-]]
-				end
-				local pt, pturl = get_page("/lair4.php")
-				if pt:contains("lair5.php") then
-					local pt, pturl = get_page("/lair5.php")
 					local function prepare_for_killing_ns()
 						script.bonus_target { "easy combat" }
 						script.want_familiar "Frumious Bandersnatch"
@@ -5256,197 +4922,6 @@ use ]] .. get_lair_tower_monster_items()[level] .. [[
 						end
 						return false
 					end
-					if pt:contains("lair6.php") then
-						result, resulturl = get_page("/lair6.php")
-						if result:contains("place=0") then
-							inform "pass door riddle"
-							result, resulturl = get_page("/lair6.php", { place = 0 })
-							automate_lair6_place(0, result)
-							pt, pturl = get_page("/lair6.php")
-							did_action = pt:contains("place=1")
-						elseif result:contains("place=1") then
-							inform "avoid electrical attack"
-							if can_wear_weapons() then
-								script.wear { weapon = "huge mirror shard" }
-							end
-							result, resulturl = get_page("/lair6.php", { place = 1 })
-							script.wear {}
-							did_action = result:contains("place=2")
-						elseif result:contains("place=2") and have_skill("Ambidextrous Funkslinging") and count_item("gauze garter") >= 8 then
-							inform "defeat shadow"
-							script.wear {}
-							script.heal_up()
-							script.want_familiar "Frumious Bandersnatch"
-							set_mcd(0)
-							local pt, url = get_page("/lair6.php", { place = 2 })
-							result, resulturl, advagain = handle_adventure_result(pt, url, "?", [[
-]] .. COMMON_MACROSTUFF_START(20, 5) .. [[
-
-use gauze garter, gauze garter
-if hasskill Saucy Salve
-	cast Saucy Salve
-endif
-use gauze garter, gauze garter
-use gauze garter, gauze garter
-use gauze garter, gauze garter
-
-]])
-							did_action = get_result():contains("<!--WINWINWIN-->")
-						elseif result:contains("place=2") and count_item("gauze garter") >= 8 and (have_item("Rain-Doh indigo cup") or have_item("double-ice cap")) then
-							inform "defeat shadow"
-							script.bonus_target { "easy combat" }
-							script.want_familiar "Frumious Bandersnatch"
-							script.ensure_buffs { "Go Get 'Em, Tiger!" }
-							script.wear { hat = first_wearable { "double-ice cap" } }
-							set_mcd(0)
-							if maxhp() < 300 then
-								script.wear { hat = first_wearable { "double-ice cap" }, acc1 = first_wearable { "bejeweled pledge pin" }, acc2 = first_wearable { "plastic vampire fangs" }, acc1 = first_wearable { "sphygmomanometer" } }
-							end
-							if maxhp() < 300 then
-								script.maybe_ensure_buffs { "Standard Issue Bravery", "Starry-Eyed", "Puddingskin" }
-							end
-							script.force_heal_up()
-							if hp() < 300 and not have_equipped_item("double-ice cap") then
-								stop "Kill your shadow"
-							end
-							local pt, url = get_page("/lair6.php", { place = 2 })
-							result, resulturl, advagain = handle_adventure_result(pt, url, "?", [[
-]] .. COMMON_MACROSTUFF_START(20, 5) .. [[
-
-use gauze garter
-if hasskill Saucy Salve
-	cast Saucy Salve
-endif
-use gauze garter
-if hascombatitem Rain-Doh indigo cup
-	use Rain-Doh indigo cup
-endif
-use gauze garter
-use gauze garter
-use gauze garter
-
-]])
-							did_action = get_result():contains("<!--WINWINWIN-->")
-						elseif result:contains("place=3") or result:contains("place=4") then
-							-- TODO: check weight
-							inform "pass NS familiars"
-							script.ensure_buffs { "Leash of Linguini", "Empathy" }
-							script.maybe_ensure_buffs { "Billiards Belligerence" }
-							script.maybe_ensure_buffs_in_fist { "Leash of Linguini", "Empathy" }
-							script.heal_up()
-							result, resulturl = get_page("/lair6.php", { place = 3 })
-							automate_lair6_place(3, result)
-							script.heal_up()
-							result, resulturl = get_page("/lair6.php", { place = 4 })
-							automate_lair6_place(4, result)
-							pt, pturl = get_page("/lair6.php")
-							did_action = pt:contains("place=5")
-						elseif result:contains("place=5") and prepare_for_killing_ns() then
-							inform "kill NS"
-							result, resulturl = get_page("/lair6.php", { place = 5 })
-							result, resulturl, advagain = handle_adventure_result(get_result(), resulturl, "?", macro_kill_ns)
-							while get_result():contains([[<!--WINWINWIN-->]]) and get_result():contains([[fight.php]]) and locked() do
-								result, resulturl = get_page("/fight.php")
-								result, resulturl, advagain = handle_adventure_result(get_result(), resulturl, "?", macro_kill_ns)
-							end
-							finished = true
-						else
-							inform "finish top of tower"
-							script.bonus_target { "easy combat" }
-							script.wear {}
-							script.heal_up()
-							result, resulturl = get_page("/lair6.php")
-							result = add_message_to_page(get_result(), "Finish top of tower", nil, "darkorange")
-							finished = true
-						end
-					else
-						if check_levels { 4, 5, 6 } then
-							async_post_page("/lair5.php", { action = "level1" })
-							local pt, url = get_page("/fight.php")
-							result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(4))
-							async_post_page("/lair5.php", { action = "level2" })
-							local pt, url = get_page("/fight.php")
-							result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(5))
-							async_post_page("/lair5.php", { action = "level3" })
-							local pt, url = get_page("/fight.php")
-							result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(6))
-							local pt, pturl = get_page("/lair5.php")
-							if pt:contains("lair6.php") then
-								did_action = true
-							end
-						else
-							if pt:contains([[value="level1"]]) then
-								local t = nil
-								for l_, x in ipairs(get_lair_tower_monster_items()) do
-									if l_ >= 4 and not have_item(x) then
-										t = tasks.get_tower_item_farming_task(x) or t
-									end
-								end
-								if t then
-									run_task(t)
-									return
-								end
-							end
-							inform "finish upper part of tower"
-							result, resulturl = get_page("/lair5.php")
-							result = add_message_to_page(get_result(), "Finish upper part of tower", nil, "darkorange")
-							finished = true
-						end
-					end
-				else
-					if check_levels { 1, 2, 3 } then
-						async_post_page("/lair4.php", { action = "level1" })
-						local pt, url = get_page("/fight.php")
-						result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(1))
-						async_post_page("/lair4.php", { action = "level2" })
-						local pt, url = get_page("/fight.php")
-						result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(2))
-						async_post_page("/lair4.php", { action = "level3" })
-						local pt, url = get_page("/fight.php")
-						result, resulturl, advagain = handle_adventure_result(pt, url, "?", make_tower_macro(3))
-						local pt, pturl = get_page("/lair4.php")
-						if pt:contains("lair5.php") then
-							did_action = true
-						end
-					else
-						if pt:contains([[value="level1"]]) then
-							local t = nil
-							for _, x in ipairs(get_lair_tower_monster_items()) do
-								if not have_item(x) then
-									t = tasks.get_tower_item_farming_task(x) or t
-								end
-							end
-							if t then
-								run_task(t)
-								return
-							end
-						end
-						inform "finish lower part of tower"
-						result, resulturl = get_page("/lair4.php")
-						result = add_message_to_page(get_result(), "Finish lower part of tower", nil, "darkorange")
-						finished = true
-					end
-				end
-			elseif pturl:contains("/lair3.php") and pt:contains("hedge") then
-				inform "do hedge maze"
-				script.heal_up()
-				script.ensure_mp(100)
-				local pt, url = post_page("/lair3.php", { action = "hedge" })
-				result, resulturl, advagain = handle_adventure_result(pt, url, "?", macro_noodleserpent)
-				if have_item("hedge maze puzzle") and not locked() then
-					solve_hedge_maze_puzzle()
-					advagain = true
-				end
-				did_action = advagain
-			else
-				inform "TODO: finish lair (2)"
-				if challenge == "fist" then
-					script.ensure_buffs { "Earthen Fist" }
-				end
-				result, resulturl = get_page("/lair2.php")
-				result = add_message_to_page(get_result(), "TODO: do lair (2)", nil, "darkorange")
-				finished = true
-			end
 		end
 	end }
 
@@ -5680,20 +5155,6 @@ use gauze garter
 		did_action = not locked()
 	end
 
-	if locked() == "choice" and playerclass("Turtle Tamer") then
-		-- TODO: only trigger when there's only one choice
-		local ctr = 0
-		result, resulturl = get_page("/choice.php")
-		result, resulturl, advagain = handle_adventure_result(result, resulturl, "?", nil, nil, function(advtitle, choicenum, pt)
-			if ctr < 10 then
-				ctr = ctr + 1
-				print("AUTOMATION: guessing this is a turtle taming choice adventure, picking option 1")
-				return "", 1
-			end
-		end)
-		did_action = not locked()
-	end
-
 	if have_buff("Beaten Up") then
 		if get_result():contains("That's all the horror you can take.  You flee the scene.") then
 			if have_buff("Beaten Up") then
@@ -5788,6 +5249,7 @@ local ascension_script_options_tbl = {
 	["skip library key"] = { yes = "get library key manually", no = "automate quest normally" },
 	["go for a 2-day SCHR"] = { yes = "yes I'm crazy", no = "no thanks", when = function() return ascensionpath("Heavy Rains") end },
 	["fold +ML equipment"] = { yes = "fold automatically", no = "don't automate", when = function() return not ascensionstatus("Hardcore") end, default_yes = true },
+	["automate semi-rares"] = { yes = "yes, and eat fortune cookie", no = "no, stop on semirares", default_yes = true },
 }
 
 function script_want_library_key()
@@ -5799,7 +5261,7 @@ function script_want_2_day_SCHR()
 end
 
 function script_use_unified_kill_macro()
-	return script_want_2_day_SCHR() or ascensionpath("Heavy Rains") or ascensionpath("Picky")
+	return script_want_2_day_SCHR() or ascensionpath("Heavy Rains") or ascensionpath("Picky") or ascensionpath("Standard") or ascensionpath("Actually Ed the Undying")
 end
 
 function ascension_script_option(name)
@@ -5825,7 +5287,7 @@ ascension_automation_setup_href = add_automation_script("setup-ascension-automat
 		return get_page("/main.php")
 	end
 
-	local ok_paths = { [0] = true, ["Avatar of Boris"] = true, [10] = true, ["Avatar of Jarlsberg"] = true, ["BIG!"] = true, ["Avatar of Sneaky Pete"] = true, ["Heavy Rains"] = true }
+	local ok_paths = { [0] = true, ["Avatar of Boris"] = true, [10] = true, ["Avatar of Jarlsberg"] = true, ["BIG!"] = true, ["Avatar of Sneaky Pete"] = true, ["Heavy Rains"] = true, ["Actually Ed the Undying"] = true }
 -- ["Way of the Surprising Fist"] = true -- needs updates
 	local path_support_text = ""
 	local pathdesc = string.format([[%s %s]], ascensionstatus(), ascensionpathname())
@@ -5839,7 +5301,7 @@ ascension_automation_setup_href = add_automation_script("setup-ascension-automat
 		path_is_ok = false
 	end
 	if not path_is_ok then
-		path_support_text = string.format([[<p style="color: darkorange">You are currently in %s (%s). This is not a well supported path for the ascension script.</p>]], pathdesc, playerclassname())
+		path_support_text = string.format([[<p style="color: darkorange">You are currently in %s (%s). This is not a well supported path for the ascension script.</p>]], pathdesc, maybe_playerclassname() or "?")
 	else
 		path_support_text = string.format([[<p>You are currently in %s.</p>]], pathdesc)
 	end
@@ -5882,7 +5344,7 @@ end)
 
 add_printer("/main.php", function()
 	if not setting_enabled("enable turnplaying automation") then return end
-	if tonumber(status().freedralph) == 1 then
+	if tonumber(status().freedralph) == 1 and not ascensionpath("Actually Ed the Undying") then
 		text = text:gsub([[title="Bottom Edge".-</table>]], [[%0<table><tr><td><center><a href="]]..custom_aftercore_automation_href { pwd = session.pwd }..[[" style="color: green">{ Setup/run scripts }</a></center></td></tr></table>]])
 		return
 	end
