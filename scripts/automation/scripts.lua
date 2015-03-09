@@ -550,16 +550,15 @@ function get_automation_scripts(cached_stuff)
 	end
 
 	function f.burn_mp(downto_input, hundreds, recursed)
-		local downto = downto_input
 		if not hundreds then
 			hundreds = 50
 		end
-		if not downto then
+		if not downto_input then
 			error "No downto parameter specified for burn_mp()"
 		end
 		local maxmp_downto = math.min(80, maxmp() / 4)
 		local ml_downto = math.min(80, downto_input + estimate_bonus("Monster Level") / 2)
-		downto = math.max(downto, maxmp_downto)
+		local downto = math.max(downto_input, maxmp_downto, ml_downto, maxmp() - 100)
 		local distance = 30
 		if level() >= 8 then
 			distance = 50
@@ -654,7 +653,6 @@ function get_automation_scripts(cached_stuff)
 			if have_item(w) then
 				if count_item(w) < 20 then
 					set_result(use_item(w))
-					did_action = true
 				end
 			end
 		end
@@ -662,7 +660,6 @@ function get_automation_scripts(cached_stuff)
 			if count_item(w) >= 2 then
 				if count_item(w) < 20 then
 					set_result(use_item(w))
-					did_action = true
 				end
 			end
 		end
@@ -676,7 +673,6 @@ function get_automation_scripts(cached_stuff)
 						stop("Somehow have 100+ of " .. tostring(s) .. " when trying to sell items")
 					end
 					set_result(sell_item(s))
-					did_action = true
 				end
 			end
 			for s in table.values(sell_except_one) do
@@ -685,11 +681,9 @@ function get_automation_scripts(cached_stuff)
 						stop("Somehow have 100+ of " .. tostring(s) .. " when trying to sell items")
 					end
 					set_result(sell_item(s))
-					did_action = true
 				end
 			end
 		end
-		return did_action
 	end
 
 	function f.ensure_mp(amount, recursed)
@@ -705,7 +699,7 @@ function get_automation_scripts(cached_stuff)
 		if challenge == "boris" then
 			if have_skill("Banishing Shout") and maxmp() >= 60 and level() >= 6 then
 				amount = 55
-			elseif ascensionstatus() == "Hardcore" and maxmp() >= 40 and level() >= 6 then
+			elseif ascensionstatus("Hardcore") and maxmp() >= 40 and level() >= 6 then
 				amount = math.min(amount, 30)
 			else
 				amount = math.min(amount, 15)
@@ -750,22 +744,27 @@ function get_automation_scripts(cached_stuff)
 				["Knob Goblin seltzer"] = 12,
 				["tiny house"] = 24,
 			}
+			local function useit(item)
+				local c = count_item(item)
+				use_item(item)()
+				if count_item(item) >= c then
+					critical("Failed to use " .. item)
+				end
+				return script.ensure_mp(amount, true)
+			end
 			for name, limit in pairs(restore_items) do
 				if have_item(name) and (mp() + limit < maxmp()) then
-					use_item(name)
-					return f.ensure_mp(amount, true)
+					return useit(name)
 				end
 			end
 			for name, limit in pairs(restore_items) do
 				if have_item(name) and (mp() + limit * 0.75 < maxmp()) then
-					use_item(name)
-					return f.ensure_mp(amount, true)
+					return useit(name)
 				end
 			end
 			for name, limit in pairs(restore_items) do
 				if have_item(name) and (mp() + limit * 0.5 < maxmp()) then
-					use_item(name)
-					return f.ensure_mp(amount, true)
+					return useit(name)
 				end
 			end
 			local have_chateau = true -- TODO: check
@@ -1710,6 +1709,8 @@ endif
 		end
 		if arrowed_possible and minmp < 60 then
 			minmp = 60
+		elseif maxmp() >= 100 and minmp < 40 then
+			minmp = 40
 		end
 		inform(info)
 		ensure_buffs(buffslist)
@@ -2326,6 +2327,46 @@ endif
 			script.ensure_buff_turns("Ode to Booze", space)
 			for _, x in ipairs(todrink) do
 				drink_item(x)
+			end
+		end
+	end
+
+	function script.use_spleen()
+		if ascension_script_option("eat manually") then return end
+		local function space()
+			return estimate_max_spleen() - spleen()
+		end
+
+		local spleen_item_list = {
+			{ name = "steel-scented air freshener", size = 5, level = 0 },
+			{ name = "mummified beef haunch", size = 5, level = 0 },
+			{ name = "astral energy drink", size = 8, level = 11 },
+			{ name = "not-a-pipe", size = 4, level = 4 },
+			{ name = "glimmering roc feather", size = 4, level = 4 },
+			{ name = "groose grease", size = 4, level = 0 },
+			{ name = "agua de vida", size = 4, level = 4 },
+			{ name = "coffee pixie stick", size = 4, level = 4 },
+			{ name = "grim fairy tale", size = 4, level = 0 },
+		}
+
+		local function can_use_spleen(x)
+			if x.name == "astral energy drink" then
+			elseif have_item("astral energy drink") then
+				if spleen() + x.size + 8 > estimate_max_spleen() then
+					return false
+				elseif advs() >= 15 then
+					return false
+				end
+			end
+			return space() >= x.size and level() >= x.level
+		end
+
+		for _, x in ipairs(spleen_item_list) do
+			local c = count_item(x.name)
+			if c >= 1 and can_use_spleen(x) then
+				result, resulturl = use_item(x.name)()
+				did_action = count_item(x.name) < c
+				return result, resulturl, did_action
 			end
 		end
 	end
@@ -3695,7 +3736,7 @@ endif
 
 	function f.do_boss_bat(macrofunc, extra_mp)
 		ignore_buffing_and_outfit = false
-		local batholept = get_page("/bathole.php")
+		local batholept = get_page("/place.php", { whichplace = "bathole" })
 		if not batholept:match("Boss") then
 			script.bonus_target { "item" }
 			maybe_pull_in_casual("sonar-in-a-biscuit")
@@ -4229,6 +4270,17 @@ endif
 	end
 
 	function f.find_black_market()
+		local woods = get_page("/woods.php")
+		if woods:contains("Black Market") then
+			cached_stuff.found_black_market = true
+		else
+			local woods2 = get_page("/place.php", { whichplace = "woods" })
+			cached_stuff.found_black_market = woods2:contains("Black Market")
+		end
+		if cached_stuff.found_black_market then
+			did_action = true
+			return
+		end
 		use_dancecard()
 		if have_item("broken wings") and have_item("sunken eyes") then
 			meatpaste_items("broken wings", "sunken eyes")()
@@ -4772,6 +4824,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 	if zoneid and zoneid ~= "?" then
 		zoneid = get_zoneid(zoneid)
 	end
+	local already_ran_macro = false
 	local function handle_fight(pt, url)
 		local advagain = nil
 		if pt:contains([[>You win the fight!<!--WINWINWIN--><]]) then
@@ -4783,10 +4836,13 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 				advagain = true
 			end
 		end
+		if advagain ~= nil then
+			already_ran_macro = false
+		end
 		if advagain and locked() and pt:contains("choice.php") then
 			return post_page("/choice.php", { pwd = session.pwd })
 		end
-		if advagain == nil then
+		if advagain == nil and not already_ran_macro then
 			if macro then
 				local macrotext = macro
 				for i = 1, 10 do
@@ -4794,6 +4850,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 						macrotext = macrotext(pt)
 					end
 				end
+				already_ran_macro = true
 				return post_page("/fight.php", { action = "macro", macrotext = macrotext })
 --			else
 --				stop "in an unexpected fight with no macro to use"
@@ -4817,7 +4874,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 			advagain = true
 			return nil, pt, url, advagain
 		end
-		local choice_adventure_number = tonumber(pt:match([[name=whichchoice value=([0-9]+)]]))
+		local choice_adventure_number = tonumber(pt:match([[name="?whichchoice"? value="?([0-9]+)"?]]))
 		local pickchoice = nil
 		local optname = nil
 		if specialnoncombatfunction then

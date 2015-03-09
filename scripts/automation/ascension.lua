@@ -454,7 +454,9 @@ endif
 		cached_stuff.gotten_guild_challenge = true
 	end
 
-	cached_stuff.currently_checked.kgs_available = cached_stuff.currently_checked.kgs_available or cached_stuff.remember_kgs_available
+	if cached_stuff.remember_kgs_available then
+		cached_stuff.currently_checked.kgs_available = true
+	end
 	if cached_stuff.currently_checked.kgs_available == nil then
 		cached_stuff.currently_checked.kgs_available = check_buying_from_knob_dispensary()
 	end
@@ -1044,21 +1046,6 @@ endif
 	}
 
 	add_task {
-		when = have_item("steel-scented air freshener") and estimate_max_spleen() - spleen() >= 5,
-		task = {
-			message = "using steel-scented air freshener",
-			nobuffing = true,
-			action = function()
-				clear_cached_skills()
-				use_item("steel-scented air freshener")
-				if not have_item("steel-scented air freshener") then
-					did_action = true
-				end
-			end
-		}
-	}
-
-	add_task {
 		when = estimate_max_spleen() - spleen() == 7 and have_item("astral energy drink") and level() >= 11 and have_item("mojo filter"),
 		task = {
 			message = "use mojo filter",
@@ -1070,19 +1057,6 @@ endif
 				get_result()
 				print("free spleen after get_result", estimate_max_spleen() - spleen())
 				did_action = estimate_max_spleen() - spleen() >= 8
-			end
-		}
-	}
-
-	add_task {
-		when = estimate_max_spleen() - spleen() >= 8 and have_item("astral energy drink") and level() >= 11,
-		task = {
-			message = "use astral energy drink",
-			nobuffing = true,
-			action = function()
-				local a = advs()
-				set_result(use_item("astral energy drink"))
-				did_action = advs() > a
 			end
 		}
 	}
@@ -1129,39 +1103,6 @@ endif
 			end
 		}
 	}
-
-	local function can_use_spleen(size)
-		if have_item("astral energy drink") then
-			if spleen() + size + 8 > estimate_max_spleen() then
-				return false
-			elseif advs() >= 15 then
-				return false
-			end
-		end
-		return estimate_max_spleen() - spleen() >= size
-	end
-
-	local function add_spleen_item_task(name, size, minlevel)
-		add_task {
-			when = can_use_spleen(size) and have_item(name) and level() >= minlevel,
-			task = {
-				message = "use " .. name,
-				nobuffing = true,
-				action = function()
-					local c = count_item(name)
-					set_result(use_item(name))
-					did_action = count_item(name) < c
-				end
-			}
-		}
-	end
-
-	add_spleen_item_task("not-a-pipe", 4, 4)
-	add_spleen_item_task("glimmering roc feather", 4, 4)
-	add_spleen_item_task("groose grease", 4, 0)
-	add_spleen_item_task("agua de vida", 4, 4)
-	add_spleen_item_task("coffee pixie stick", 4, 4)
-	add_spleen_item_task("grim fairy tale", 4, 0)
 
 	add_task {
 		when = estimate_max_spleen() - spleen() >= 4 and have_item("Game Grid token") and level() >= 4,
@@ -2857,9 +2798,6 @@ endif
 
 	if ascensionstatus() ~= "Aftercore" then -- TODO: redo
 		script.use_and_sell_items()
-		if did_action then
-			return result, resulturl, did_action
-		end
 	end
 
 	need_total_reagent_pastas = 4 * 2
@@ -2898,6 +2836,13 @@ endif
 		local pt, pturl, drank = script.drink_booze()
 		if pt then
 			return pt, pturl, drank
+		end
+	end
+
+	do
+		local pt, pturl, spleened = script.use_spleen()
+		if pt then
+			return pt, pturl, spleened
 		end
 	end
 
@@ -3673,11 +3618,6 @@ endif
 			end
 			did_action = true
 		end,
-	}
-
-	add_task {
-		when = level() < 6 and (challenge ~= "fist" or fist_level >= 3) and challenge ~= "boris" and challenge ~= "zombie" and challenge ~= "jarlsberg" and not ascensionpath("Class Act II: A Class For Pigs") and ascensionstatus() == "Hardcore" and not ascensionpath("Avatar of Sneaky Pete"),
-		task = tasks.do_sewerleveling,
 	}
 
 	add_task {
@@ -4679,7 +4619,7 @@ endif
 	}
 
 	add_task {
-		prereq = quest_text("the Black Market"),
+		prereq = quest_text("the Black Market") and not cached_stuff.found_black_market,
 		f = script.find_black_market,
 	}
 
@@ -4704,15 +4644,9 @@ endif
 	}
 
 	add_task {
-		prereq = level() < 10,
-		f = do_powerleveling,
-		message = "level to 10",
-	}
-
-	add_task {
 		prereq = level() < 11,
 		f = do_powerleveling,
-		message = "level to 11",
+		message = "level up",
 	}
 
 	add_task {
@@ -5016,8 +4950,10 @@ endif
 			end
 			x.olfact = nil
 
-			if arrowed_possible and x.minmp < 60 then
+			if arrowed_possible and (x.minmp or 0) < 60 then
 				x.minmp = 60
+			elseif maxmp() >= 100 and (x.minmp or 0) < 40 then
+				x.minmp = 40
 			end
 
 			x.familiar = x.familiar or x.fam

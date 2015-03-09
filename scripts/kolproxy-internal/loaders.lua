@@ -127,6 +127,7 @@ load_file("other", "adventure-warnings/check-florist-friar.lua")
 
 load_file("chat", "chat/chat-kolmafia-links.lua")
 load_file("chat", "chat/chat-pvp-announcements.lua")
+load_file("chat", "chat/remove-fake-chat.lua")
 
 load_file("chat", "chat/chat-commands.lua")
 load_file("chat", "chat/chat-utils.lua")
@@ -191,6 +192,7 @@ load_file("other", "paths/moonsigns.lua")
 load_file("other", "paths/jarlsberg.lua")
 load_file("other", "paths/sneaky-pete.lua")
 load_file("other", "paths/heavy-rains.lua")
+load_file("other", "paths/ed.lua")
 
 load_file("interface", "interface/charpane.lua")
 
