@@ -175,7 +175,7 @@ local function automate_day(whichday)
 	elseif ascensionpath("Avatar of Boris") then
 		-- TODO: pull third wine bottle
 		challenge = "boris"
-		if ascensionstatus() == "Hardcore" then
+		if ascensionstatus("Hardcore") then
 			macro_softcore_boris = macro_hardcore_boris
 		end
 		macro_softcore = macro_softcore_boris
@@ -205,7 +205,7 @@ endif
 ]]
 		end
 		elemental_damage_action = boris_action
-		if ascensionstatus() == "Hardcore" or fullness() >= 10 then
+		if ascensionstatus("Hardcore") or fullness() >= 10 then
 			function elemental_damage_action()
 				return [[
 
@@ -226,10 +226,10 @@ cast Heroic Belch
 				return macro_softcore_boris()
 			elseif name == "Hellion" then
 				return macro_softcore_boris()
-			elseif name == "Astronomer" and ascensionstatus() == "Hardcore" then
+			elseif name == "Astronomer" and ascensionstatus("Hardcore") then
 				return macro_softcore_boris()
 			elseif name == "gaudy pirate" then
-				if not have_item("gaudy key") and not have_item("snakehead charrrm") and not have_item("Talisman o' Nam") and ascensionstatus() ~= "Hardcore" then
+				if not have_item("gaudy key") and not have_item("snakehead charrrm") and not have_item("Talisman o' Nam") and not ascensionstatus("Hardcore") then
 					if have_item("Rain-Doh black box") then
 						return macro_softcore_boris([[
 
@@ -251,7 +251,7 @@ endif
 		end
 	elseif ascensionpath("Zombie Slayer") then
 		challenge = "zombie"
-		if ascensionstatus() == "Hardcore" then
+		if ascensionstatus("Hardcore") then
 			macro_softcore_boris = macro_hardcore_boris
 		end
 		boris_action = function()
@@ -302,7 +302,7 @@ endif
 	elseif ascensionpath("Avatar of Jarlsberg") then
 		-- TODO: pull third wine bottle
 		challenge = "jarlsberg"
-		if ascensionstatus() == "Hardcore" then
+		if ascensionstatus("Hardcore") then
 			macro_softcore_boris = macro_hardcore_boris
 		end
 		macro_softcore = macro_softcore_boris
@@ -424,10 +424,10 @@ endif
 				return macro_softcore_boris()
 			elseif name == "Hellion" then
 				return macro_softcore_boris()
-			elseif name == "Astronomer" and ascensionstatus() == "Hardcore" then
+			elseif name == "Astronomer" and ascensionstatus("Hardcore") then
 				return macro_softcore_boris()
 			elseif name == "gaudy pirate" then
-				if not have_item("gaudy key") and not have_item("snakehead charrrm") and not have_item("Talisman o' Nam") and ascensionstatus() ~= "Hardcore" then
+				if not have_item("gaudy key") and not have_item("snakehead charrrm") and not have_item("Talisman o' Nam") and not ascensionstatus("Hardcore") then
 					if have_item("Rain-Doh black box") then
 						return macro_softcore_boris([[
 
@@ -543,6 +543,9 @@ endif
 	local function ensure_yellow_ray()
 		if not can_yellow_ray() then
 			return false
+		end
+		if have_skill("Wrath of Ra") then
+			return true
 		end
 		if script.have_familiar("He-Boulder") then
 			return true
@@ -1607,7 +1610,7 @@ endif
 	}
 
 	add_task {
-		when = challenge == "boris" and ascensionstatus() ~= "Hardcore" and meat() >= 3000 and buffturns("Go Get 'Em, Tiger!") < 10,
+		when = challenge == "boris" and not ascensionstatus("Hardcore") and meat() >= 3000 and buffturns("Go Get 'Em, Tiger!") < 10,
 		task = {
 			message = "use ben-gal",
 			nobuffing = true,
@@ -1619,7 +1622,7 @@ endif
 	}
 
 	add_task {
-		when = challenge == "boris" and have_skill("Pep Talk") and ((level() >= 3 and ascensionstatus() ~= "Hardcore") or level() >= 7) and level() < 13 and not have_intrinsic("Overconfident"),
+		when = challenge == "boris" and have_skill("Pep Talk") and ((level() >= 3 and not ascensionstatus("Hardcore")) or level() >= 7) and level() < 13 and not have_intrinsic("Overconfident"),
 		task = {
 			message = "use pep talk",
 			nobuffing = true,
@@ -1712,7 +1715,7 @@ endif
 				return
 			end
 			if not have_item(item) then
-				critical("Failed to pull " .. tostring(item))
+				stop("Failed to pull " .. tostring(item), result)
 			end
 		end
 	end
@@ -1920,7 +1923,7 @@ endif
 	want_softcore_item_oneof { "duonoculars", "ring of conflict" }
 
 	add_task {
-		when = ascensionstatus() ~= "Hardcore" and
+		when = not ascensionstatus("Hardcore") and
 			moonsign_area() == "Gnomish Gnomad Camp" and
 			not unlocked_beach(),
 		task = {
@@ -1942,7 +1945,7 @@ endif
 	}
 
 	add_task {
-		when = ascensionstatus() ~= "Hardcore" and moonsign_area() == "Gnomish Gnomad Camp" and not have_skill("Torso Awaregness") and meat() >= 10000,
+		when = not ascensionstatus("Hardcore") and moonsign_area() == "Gnomish Gnomad Camp" and not have_skill("Torso Awaregness") and meat() >= 10000,
 		task = {
 			message = "learn Torso Awaregness",
 			nobuffing = true,
@@ -1954,7 +1957,7 @@ endif
 	}
 
 	add_task {
-		when = ascensionstatus() ~= "Hardcore" and moonsign_area() == "Gnomish Gnomad Camp" and not have_skill("Powers of Observatiogn") and meat() >= 10000,
+		when = not ascensionstatus("Hardcore") and moonsign_area() == "Gnomish Gnomad Camp" and not have_skill("Powers of Observatiogn") and meat() >= 10000,
 		task = {
 			message = "learn Powers of Observatiogn",
 			nobuffing = true,
@@ -2004,7 +2007,7 @@ endif
 	add_task {
 		when = challenge == "boris" and
 			daysthisrun() == 1 and
-			ascensionstatus() ~= "Hardcore" and
+			not ascensionstatus("Hardcore") and
 			count_item("Moon Pie") >= 4 and
 			have_item("Wrecked Generator") and
 			count_item("milk of magnesium") >= 2 and
@@ -2036,7 +2039,7 @@ endif
 	add_task {
 		when = challenge == "boris" and
 			daysthisrun() == 1 and
-			ascensionstatus() ~= "Hardcore" and
+			not ascensionstatus("Hardcore") and
 			count_item("Moon Pie") >= 2 and
 			have_item("Wrecked Generator") and
 			count_item("milk of magnesium") >= 1
@@ -2066,7 +2069,7 @@ endif
 	add_task {
 		when = challenge == "boris" and
 			daysthisrun() == 1 and
-			ascensionstatus() ~= "Hardcore" and
+			not ascensionstatus("Hardcore") and
 			count_item("Moon Pie") >= 2 and
 			have_item("Wrecked Generator") and
 			count_item("milk of magnesium") >= 1 and
@@ -2145,7 +2148,7 @@ endif
 
 	add_task {
 		when = challenge == "zombie" and
-			ascensionstatus() == "Hardcore" and
+			ascensionstatus("Hardcore") and
 			have_skill("Neurogourmet") and
 			(have_item("hunter brain") or have_item("boss brain")) and
 			fullness() < estimate_max_fullness() and
@@ -2163,7 +2166,7 @@ endif
 
 	add_task {
 		when = challenge == "zombie" and
-			ascensionstatus() == "Hardcore" and
+			ascensionstatus("Hardcore") and
 			have_skill("Neurogourmet") and
 			have_skill("Stomach of Steel") and
 			have_item("good brain") and
@@ -2569,12 +2572,12 @@ endif
 	end
 
 	add_faxing_task("ninja snowman assassin", function()
-		local mc = get_page("/place.php", { whichplace = "mclargehuge" })
+		local mc = get_place("mclargehuge")
 		return not mc:contains("/peak.gif") and not have_item("ninja rope") and not have_item("ninja crampons") and not have_item("ninja carabiner")
 	end, false)
 
 	add_faxing_task("smut orc pervert", function()
-		local oc = get_page("/place.php", { whichplace = "orc_chasm" })
+		local oc = get_place("orc_chasm")
 		return oc:contains("nobridge.gif") and not have_item("smut orc keepsake box") and false
 	end, true)
 
@@ -2593,7 +2596,7 @@ endif
 				get_page("/choice.php", { forceoption = 0 })
 				post_page("/choice.php", { pwd = session.pwd, whichchoice = 570, option = 1 })
 				get_page("/da.php")
-				get_page("/place.php", { whichplace = "faqdungeon" })
+				get_place("faqdungeon")
 				result, resulturl, did_action = (adventure { zoneid = 319 })()
 				get_page("/choice.php", { forceoption = 0 })
 				use_item("dungeoneering kit")()
@@ -2642,7 +2645,7 @@ endif
 		task = {
 			message = "kill goblin king",
 			action = function()
-				if ascensionstatus() == "Hardcore" then
+				if ascensionstatus("Hardcore") then
 					stop "TODO: Kill goblin king in HCBoris"
 				end
 				if challenge == "boris" then
@@ -2710,7 +2713,7 @@ endif
 		task = {
 			message = "clancy fight luter",
 			action = function()
-				local pt, url = get_page("/place.php", { whichplace = "plains", action = "lutersgrave" })
+				local pt, url = get_place("plains", "lutersgrave")
 				result, resulturl, advagain = handle_adventure_result(pt, url, "?", macro_softcore_boris)
 				did_action = have_item("Clancy's lute")
 			end
@@ -2796,13 +2799,13 @@ endif
 		return script.finger_cuffs()
 	end
 
-	if ascensionstatus() ~= "Aftercore" then -- TODO: redo
+	if not ascensionstatus("Aftercore") then -- TODO: redo
 		script.use_and_sell_items()
 	end
 
 	need_total_reagent_pastas = 4 * 2
 	have_reagent_pastas = 2 + count_item("hellion cube") + count_item("goat cheese") + count_item("Hell ramen") + count_item("Hell broth") + count_item("fettucini Inconnu") + count_item("fancy schmancy cheese sauce")
-	if ascensionstatus() ~= "Hardcore" then
+	if not ascensionstatus("Hardcore") then
 		have_reagent_pastas = 100
 	elseif fullness() > 9 then
 		have_reagent_pastas = have_reagent_pastas + 2
@@ -3040,7 +3043,7 @@ endif
 			}
 		}
 
-		add_task(tasks.unlock_hidden_temple_with_high_ML)
+		add_task(tasks.unlock_hidden_temple)
 
 		local ninja_items = countif("ninja rope") + countif("ninja crampons") + countif("ninja carabiner")
 
@@ -3955,7 +3958,7 @@ endif
 			message = "remove consumed by fear buff",
 			nobuffing = true,
 			action = function()
-				get_page("/place.php", { whichplace = "junggate_3", action = "mystic_face" })
+				get_place("junggate_3", "mystic_face")
 				did_action = not have_buff("Consumed by Fear")
 			end
 		}
@@ -4325,7 +4328,7 @@ endif
 			message = "trapper quest in boris",
 			nobuffing = true,
 			action = function()
-				async_get_page("/place.php", { whichplace = "mclargehuge", action = "trappercabin" })
+				async_get_place("mclargehuge", "trappercabin")
 				refresh_quest()
 				if not quest("Am I My Trapper's Keeper?") then
 					did_action = true
@@ -4350,7 +4353,7 @@ endif
 						end
 					end
 					ignore_buffing_and_outfit = false
-					if (daysthisrun() == 1 or ascensionstatus() == "Hardcore") and have_skill("Banishing Shout") then
+					if (daysthisrun() == 1 or ascensionstatus("Hardcore")) and have_skill("Banishing Shout") then
 						script.bonus_target { "item", "extraitem" }
 						script.go("farming mountain men", 270, macro_softcore_boris, {
 							["A Flat Miner"] = "Hijack the Meat vein",
@@ -4421,7 +4424,7 @@ endif
 	}
 
 	add_task {
-		prereq = quest("The Rain on the Plains is Mainly Garbage") or (level() >= 10 and not have_item("steam-powered model rocketship") and ascensionstatus() == "Hardcore"),
+		prereq = quest("The Rain on the Plains is Mainly Garbage") or (level() >= 10 and not have_item("steam-powered model rocketship") and ascensionstatus("Hardcore")),
 		f = function()
 			if have_item("BitterSweetTarts") and not have_buff("Full of Wist") then
 				use_item("BitterSweetTarts")
@@ -4462,7 +4465,7 @@ endif
 				end
 			elseif quest("The Rain on the Plains is Mainly Garbage") then
 				script.do_castle()
-			elseif not have_item("steam-powered model rocketship") and ascensionstatus() == "Hardcore" then
+			elseif not have_item("steam-powered model rocketship") and ascensionstatus("Hardcore") then
 				script.unlock_hits()
 			end
 		end,
@@ -4602,7 +4605,8 @@ endif
 			basemoxie() >= 70 and
 			basemysticality() >= 70 and
 			have_frat_war_outfit() and
-			not have_buff("Musk of the Moose"),
+			not have_buff("Musk of the Moose") and
+			have_item("Talisman o' Nam"),
 		f = function()
 			-- TODO: get what's needed from hippy store first
 			use_dancecard()
@@ -4698,7 +4702,7 @@ endif
 			message = "unlock pyramid",
 			nobuffing = true,
 			action = function()
-				get_page("/place.php", { whichplace = "desertbeach", action = "db_pyramid1" })
+				get_place("desertbeach", "db_pyramid1")
 				refresh_quest()
 				if not quest_text("found the little pyramid") then
 					did_action = true
@@ -5302,7 +5306,7 @@ add_printer("/main.php", function()
 
 		local rows = {}
 		for _, x in ipairs(links) do
-			local alink = [[<a href="]]..ascension_automation_script_href { pwd = session.pwd, whichday = x.whichday }..[[" style="color: green">{ Automate ascension]]..x.titleday..[[ }</a>]]
+			local alink = [[<a href="]]..ascension_automation_script_href { pwd = session.pwd, whichday = x.whichday }..[[" style="color: green" onclick="this.style.color = 'gray'">{ Automate ascension]]..x.titleday..[[ }</a>]]
 			if x.whichday == daysthisrun() then
 				alink = [[&rarr; ]] .. alink .. [[ &larr;]]
 			end

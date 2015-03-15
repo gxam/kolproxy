@@ -93,21 +93,21 @@ do
 
 	function add_ascension_warning(filename, f)
 		add_warning_internal("warning", filename, function()
-			if ascensionstatus() == "Aftercore" then return end
+			if ascensionstatus("Aftercore") then return end
 			return f()
 		end)
 	end
 
 	function add_extra_ascension_warning(filename, f)
 		add_warning_internal("extra", filename, function()
-			if ascensionstatus() == "Aftercore" then return end
+			if ascensionstatus("Aftercore") then return end
 			return f()
 		end)
 	end
 
 	function add_aftercore_warning(filename, f)
 		add_warning_internal("warning", filename, function()
-			if ascensionstatus() ~= "Aftercore" then return end
+			if not ascensionstatus("Aftercore") then return end
 			return f()
 		end)
 	end
@@ -162,21 +162,21 @@ do
 
 	function add_ascension_adventure_warning(f)
 		add_raw_adventure_warning(function(...)
-			if ascensionstatus() == "Aftercore" then return end
+			if ascensionstatus("Aftercore") then return end
 			return f(...)
 		end)
 	end
 
 	function add_extra_ascension_adventure_warning(f)
 		add_raw_extra_adventure_warning(function(...)
-			if ascensionstatus() == "Aftercore" then return end
+			if ascensionstatus("Aftercore") then return end
 			return f(...)
 		end)
 	end
 
 	function add_aftercore_adventure_warning(f)
 		add_raw_adventure_warning(function(...)
-			if ascensionstatus() ~= "Aftercore" then return end
+			if not ascensionstatus("Aftercore") then return end
 			return f(...)
 		end)
 	end
@@ -205,14 +205,14 @@ do
 
 	function add_ascension_zone_check(zid, f)
 		raw_add_zone_check(zid, function(...)
-			if ascensionstatus() == "Aftercore" then return end
+			if ascensionstatus("Aftercore") then return end
 			return f(...)
 		end)
 	end
 
 	function add_aftercore_zone_check(zid, f)
 		raw_add_zone_check(zid, function(...)
-			if ascensionstatus() ~= "Aftercore" then return end
+			if not ascensionstatus("Aftercore") then return end
 			return f(...)
 		end)
 	end
@@ -370,13 +370,18 @@ function get_resistance_levels()
 	local charpage = get_page("/charsheet.php")
 	local resists = {}
 	for _, x in pairs(get_element_names()) do
-		resists[x] = tonumber(charpage:match([[<td align=right>]]..x..[[ Protection:</td><td><b>[^>()]+%(([0-9]+)%)</b></td>]]))
+		resists[x] = tonumber(charpage:match([[<td align=right>]]..x..[[ Protection:</td><td><b>[^>()]+%(([0-9]+)%)</b></td>]])) or 0
 	end
 	return resists
 end
 
 function get_resistance_level(elem)
-	return get_resistance_levels()[elem] or 0
+	return get_resistance_levels()[elem]
+end
+
+function get_lowest_resistance_level()
+	local resists = get_resistance_levels()
+	return math.min(resists.Cold, resists.Hot, resists.Sleaze, resists.Spooky, resists.Stench)
 end
 
 function get_elemental_weaknesses(element)
