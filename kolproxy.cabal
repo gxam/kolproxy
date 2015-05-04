@@ -36,7 +36,6 @@ executable kolproxy
     HTTP,
     cryptocipher,
     tls,
-    tls-extra,
     cprng-aes,
     utf8-string,
     network-uri

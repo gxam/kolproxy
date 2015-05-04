@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, FlexibleContexts #-}
 
 module KoL.HttpLowlevel where
 
@@ -61,7 +61,7 @@ instance ConnFunctionsBundle Handle Data.ByteString.ByteString where
 	connGetContents conn = Data.ByteString.hGetContents conn
 
 data SslConn = SslConn {
-	sslconn_c :: Network.TLS.TLSCtx,
+	sslconn_c :: Network.TLS.Context,
 	sslconn_sendBuffer :: [Data.ByteString.Lazy.ByteString],
 	sslconn_recvBuffer :: Data.ByteString.ByteString
 }
@@ -226,7 +226,7 @@ simple_https_direct rq = do
 	Network.Socket.connect s a
 	h <- Network.Socket.socketToHandle s ReadWriteMode
 	rng <- makeSystem
-	c <- Network.TLS.contextNewOnHandle h (Network.TLS.defaultParamsClient { Network.TLS.pCiphers = Network.TLS.Extra.ciphersuite_strong }) rng
+	c <- Network.TLS.contextNewOnHandle h (Network.TLS.defaultParamsClient (host auth) (Data.ByteString.empty)) rng
 	Network.TLS.handshake c
 
 	mvc <- newMVar (SslConn { sslconn_c = c, sslconn_sendBuffer = [], sslconn_recvBuffer = Data.ByteString.empty })

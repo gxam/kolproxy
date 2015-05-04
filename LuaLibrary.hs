@@ -417,7 +417,7 @@ make_href _ref l = do
 
 -- TODO: parse in lua
 get_fallback_choicespoilers _ref l = do
-	fallback_spoilers <- doReadDataFile "cache/data/choice-spoilers"
+	fallback_spoilers <- doReadDataFile "cache/data/choice-spoilers" :: IO [[(String, String)]]
 	Lua.newtable l
 	topidx <- Lua.gettop l
 	let add_line xs = do
