@@ -1,0 +1,1 @@
+This branch was created primarily so I could make kolproxy compile under newer GHC on OS X.  It has also collected some of my local lua modifications as I experiment with stuff and see if anything is worht sending upstream.
