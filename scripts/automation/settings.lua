@@ -204,6 +204,7 @@ function get_ascension_automation_settings(want_bonus)
 				"old sweatpants",
 			},
 			accessories = {
+				{ name = "special sauce glove", check = function() return playerclass("Sauceror") and not have_skill("Spirit of Rigatoni") end },
 				{ name = "fudgecycle", check = function() return want_bonus.rollover_adventures end },
 				{ name = "gold wedding ring", check = function() return want_bonus.rollover_adventures end },
 				{ name = "dead guy's watch", check = function() return want_bonus.rollover_adventures end },
@@ -314,6 +315,7 @@ function get_ascension_automation_settings(want_bonus)
 			"Sneaky Pete's basket",
 			"hilarious comedy prop",
 			"ironic battle spoon",
+			"oversized pizza cutter",
 			"rubber band gun",
 			"seal-clubbing club",
 			"turtle totem",
@@ -339,6 +341,7 @@ function get_ascension_automation_settings(want_bonus)
 			"black shield",
 			"giant clay ashtray",
 			"hot plate",
+			"heavy-duty clipboard",
 			"magical ice cubes",
 		}
 	end
@@ -349,12 +352,12 @@ function get_ascension_automation_settings(want_bonus)
 				itemname = x
 			end
 		elseif type(x) == "table" then
-			if have_item(x.name) and x.check and x.check() and can_equip_item(x.name) then
-				if want_bonus.easy_combat and datafile("items")[x.name] and ((datafile("items")[x.name].equip_bonuses or {})["Monster Level"] or 0) > 0 then
-				else
-					itemname = x.name
-				end
+			if have_item(x.name) and can_equip_item(x.name) and x.check() then
+				itemname = x.name
 			end
+		end
+		if itemname and want_bonus.easy_combat and estimate_item_equip_bonuses(itemname)["Monster Level"] > 0 then
+			itemname = nil
 		end
 		return itemname
 	end
