@@ -34,8 +34,8 @@ local function handle_maze()
 	actions[3] = navigate(b, c)
 	actions[4] = navigate(c, d)
 	actions[5] = navigate(d, e)
-	ascension["zone.gameinform.maze"] = actions
-	ascension["zone.gameinform.maze_step"] = 0
+	session["zone.gameinform.maze"] = actions
+	session["zone.gameinform.maze_step"] = 0
 end
 
 add_processor("/choice.php", function()
@@ -45,49 +45,83 @@ add_processor("/choice.php", function()
 		handle_maze()
 	end
 
-	ascension["zone.gameinform.door"] = text:match([[My advice to you is to choose the (.-) door.]])
+	session["zone.gameinform.door"] = text:match([[My advice to you is to choose the (.-) door.]])
+	session["zone.gameinform.riddle"] = text:match([[The answer is "(.-)".]])
+	session["zone.gameinform.passage"] = text:match([[secret passage .- (candlesticks)]]) or text:match([[secret passage .- (bookshelves)]]) or text:match([[secret passage .- (fireplace)]])
 end)
 
 add_processor("/choice.php", function()
 	if adventure_title ~= "A Gracious Maze" then return end
 
 	if text:match([[you're going around in circles]]) then
-		ascension["zone.gameinform.maze_step"] = 0
+		session["zone.gameinform.maze_step"] = 0
 		return
 	end
 
 	if text:match([[Finally, you come to]]) then
-		ascension["zone.gameinform.maze"] = nil
+		session["zone.gameinform.maze"] = nil
 		return
 	end
 
-	if ascension["zone.gameinform.maze"] == nil then
+	if session["zone.gameinform.maze"] == nil then
 		return
 	end
 
-	ascension["zone.gameinform.maze_step"] = ascension["zone.gameinform.maze_step"] + 1
+	session["zone.gameinform.maze_step"] = session["zone.gameinform.maze_step"] + 1
 end)
 
-add_printer("/choice.php", function()
-	if adventure_title ~= "A Gracious Maze" then return end
-
-	if ascension["zone.gameinform.maze"] == nil then
-		return
+add_choice_text("A Gracious Maze", function() -- choice adventure number: 502
+	if session["zone.gameinform.maze"] == nil then
+		return {}
 	end
 
-	local step = ascension["zone.gameinform.maze_step"]
+	local step = session["zone.gameinform.maze_step"]
 	if step == 0 then
-		return
+		return {}
 	end
-	local action = ascension["zone.gameinform.maze"][step]
+	local action = session["zone.gameinform.maze"][step]
 
-	text = text:gsub([[(<input class=button type=submit value="Go ]] .. action .. [[">)]], [[%1 <span style="color: green">{ walkthru path }</span>]])
+	return {
+		["Go left"] = {text="left",good_choice = (action == "left")},
+		["Go forward"] = {text="forward",good_choice = (action == "forward")},
+		["Go right"] = {text="right",good_choice = (action == "right")},
+	}
+end)
+
+add_choice_text("Sphinx For the Memories", function()
+	local action = session["zone.gameinform.riddle"]
+	return {
+		["&quot;Time?&quot;"] = {text="time",good_choice = (action == "time")},
+		["&quot;A mirror?&quot;"] = {text="mirror",good_choice = (action == "forward")},
+		["&quot;Hope?&quot;"] = {text="hope",good_choice = (action == "right")},
+	}
+end)
+
+add_choice_text("It's a Place Where Books Are Free", function()
+	local action = session["zone.gameinform.passage"]
+	return {
+		["Check the bookshelves"] = {text="bookshelves",good_choice = (action == "bookshelves")},
+		["Move the candlesticks"] = {text="candlesticks",good_choice = (action == "candlesticks")},
+		["Search the fireplace"] = {text="fireplace",good_choice = (action == "fireplace")},
+	}
 end)
 
 add_printer("/choice.php", function()
 	if adventure_title ~= "When You're a Stranger" then return end
 
-	local action = ascension["zone.gameinform.door"]
+	local action = session["zone.gameinform.door"]
 	if action == nil then return end
 	text = text:gsub([[value="Unlock the ]] .. action .. [[ door">]], [[%1 <span style="color: green;">{ choose me }]])
 end)
+
+-- The answer is ".+".
+-- The trick here is to .*!
+-- add_printer("/choice.php", function()
+-- 	if adventure_title ~= "Think or Thwim") then return end
+
+-- 	local action = session["zone.gameinform.swim"]
+-- 	if action == nil then return end
+
+-- 	text = text:gsub([[<input class=button type=submit value="Throw your broccoli into the water"]])
+-- end)
+
