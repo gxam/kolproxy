@@ -19,6 +19,14 @@ local function parse_fight_vars(text)
 	return monster_name, monster_name_tag
 end
 
+function get_adventure_zoneid()
+	return tonumber(fight.zone)
+end
+
+function adventure_zone(zone)
+	return get_zoneid(zone) == get_adventure_zoneid()
+end
+
 -- TODO: redo the rest of this code
 function setup_variables()
 	if path == "/charpane.php" then
@@ -32,7 +40,6 @@ function setup_variables()
 	end
 
 	if path == "/fight.php" then
-		adventure_zone = tonumber(fight.zone)
 		monster_name, monster_name_tag = parse_fight_vars(text)
 		if not query:contains("ireallymeanit") then
 			encounter_source = "other"
@@ -71,14 +78,24 @@ local function monstername_from_vars(monster_name, monster_name_tag)
 	end
 end
 
-function monstername(name)
-	if name then
-		return name == monstername()
-	end
+function get_monstername()
 	return monstername_from_vars(monster_name, monster_name_tag)
 end
 
-function raw_monstername()
+function has_monster_modifiers()
+	return ascensionpath("One Crazy Random Summer")
+end
+
+function monstername(name)
+	local monster = get_monstername()
+	if name == monster then
+		return true
+	elseif monster and has_monster_modifiers() and monster:match(name .. "$") then
+		return true
+	end
+end
+
+function get_raw_monstername()
 	return monster_name
 end
 

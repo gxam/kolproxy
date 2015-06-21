@@ -1877,7 +1877,12 @@ endif
 
 	local function want_softcore_item(item, pullname, anytime)
 		add_task {
-			when = not ascensionstatus("Hardcore") and not ascension_script_option("ignore automatic pulls") and not have_item(item) and not cached_stuff["ignore pull: " .. tostring(item)],
+			when = not ascensionstatus("Hardcore") and
+				not ascension_script_option("ignore automatic pulls") and
+				not have_item(item) and
+				not cached_stuff["ignore pull: " .. tostring(item)] and
+				not item_is_unavailable(item) and
+				could_have_item_in_storage(item),
 			task = {
 				message = "pull " .. item,
 				nobuffing = true,
@@ -1905,13 +1910,22 @@ endif
 	local function want_softcore_item_oneof(itemnames)
 		local descitem = itemnames[1] or "???"
 		local gotone = false
+		local couldhave = false
 		for _, x in ipairs(itemnames) do
 			if have_item(x) then
 				gotone = true
 			end
+			if could_have_item_in_storage(x) then
+				couldhave = true
+			end
 		end
 		add_task {
-			when = not ascensionstatus("Hardcore") and not ascension_script_option("ignore automatic pulls") and not gotone and not cached_stuff["ignore pull: " .. tostring(descitem)],
+			when = not ascensionstatus("Hardcore") and
+				not ascension_script_option("ignore automatic pulls") and
+				not gotone and
+				not cached_stuff["ignore pull: " .. tostring(descitem)] and
+				not item_is_unavailable(descitem) and
+				couldhave,
 			task = {
 				message = "pull " .. descitem,
 				nobuffing = true,
@@ -2896,13 +2910,12 @@ endif
 
 	function do_mantegna_resting()
 		local pt = get_place("chateau", "chateau_nightstand")
-		local substats = pt:match("some (.-) substats when you rest")
-		if substats == mainstat_type() then
+		local substats = pt:contains("some " .. get_mainstat_type() .. " substats when you rest")
+		if pt:contains("some " .. get_mainstat_type() .. " substats when you rest") then
 			local oldstat = rawmainstat()
 			result, resulturl = get_place("chateau", "chateau_restbox")
 			did_action = rawmainstat() > oldstat
 		else
-			print("DEBUG: detected mantegna substats as: " .. tostring(substats))
 			stop("TODO: wanted to rest at mantegna, but don't have the mainstat-appropriate nightstand item for powerleveling. Either buy the right nightstand item and run the script again, or powerlevel/restore MP manually.", pt)
 		end
 	end
@@ -2912,8 +2925,8 @@ endif
 			inform "vamping out"
 			cached_stuff.tried_vamping_out = true
 			script.wear { acc1 = "plastic vampire fangs" }
-			inform("vamping out: " .. mainstat_type())
-			vamp_out(mainstat_type())
+			inform("vamping out: " .. get_mainstat_type())
+			vamp_out(get_mainstat_type())
 			did_action = true
 		elseif have_chateau_mantegna() then
 			inform "powerleveling by resting at mantegna"
@@ -2933,7 +2946,7 @@ endif
 
 	if challenge ~= "zombie" then
 		if have_buff("Hardly Poisoned at All") or have_buff("A Little Bit Poisoned") or have_buff("Somewhat Poisoned") or have_buff("Really Quite Poisoned") or have_buff("Majorly Poisoned") then
-			async_get_page("/galaktik.php", { action = "buyitem", buying = 1, pwd = get_pwd(), whichitem = get_itemid("anti-anti-antidote"), howmany = 1, ajax = 1 })
+			buy_item("anti-anti-antidote")
 			use_item("anti-anti-antidote")
 			if have_buff("Hardly Poisoned at All") or have_buff("A Little Bit Poisoned") or have_buff("Somewhat Poisoned") or have_buff("Really Quite Poisoned") or have_buff("Majorly Poisoned") then
 				critical "Failed to remove poison"
@@ -4485,7 +4498,7 @@ endif
 	}
 
 	add_task {
-		prereq = quest("The Rain on the Plains is Mainly Garbage") or (level() >= 10 and not have_item("steam-powered model rocketship") and ascensionstatus("Hardcore")),
+		prereq = quest("The Rain on the Plains is Mainly Garbage") or (level() >= 10 and not have_item("steam-powered model rocketship")),
 		f = function()
 			if have_item("BitterSweetTarts") and not have_buff("Full of Wist") then
 				use_item("BitterSweetTarts")
@@ -4527,7 +4540,7 @@ endif
 				end
 			elseif quest("The Rain on the Plains is Mainly Garbage") then
 				script.do_castle()
-			elseif not have_item("steam-powered model rocketship") and ascensionstatus("Hardcore") then
+			elseif not have_item("steam-powered model rocketship") then
 				script.unlock_hits()
 			end
 		end,
@@ -4566,6 +4579,11 @@ endif
 				did_action = have_item("Wand of Nagamar")
 			end
 		}
+	}
+
+	add_task {
+		prereq = want_star_key(),
+		f = script.make_star_key,
 	}
 
 	add_task {
@@ -4827,6 +4845,7 @@ endif
 			not cached_stuff.currently_checked.unlocked_pyramid,
 		f = function()
 			inform "unlock pyramid"
+			get_place("desertbeach", "db_pyramid1")
 			result, resulturl = get_place("pyramid")
 			refresh_quest()
 			cached_stuff.currently_checked.unlocked_pyramid = true
@@ -4871,11 +4890,6 @@ endif
 	add_task {
 		prereq = doing_lvl12_war() and not completed_sonofa_beach(),
 		f = script.do_sonofa,
-	}
-
-	add_task {
-		prereq = want_star_key(),
-		f = script.make_star_key,
 	}
 
 	add_task {
@@ -4935,6 +4949,7 @@ endif
 		if ((advs() < 50 and turnsthisrun() + advs() < 650) or (advs() < 10)) and fullness() >= 12 and drunkenness() >= estimate_max_safe_drunkenness() then
 			stop "TODO: end of day 4. (pvp,) overdrink"
 		else
+			stop "??? Nothing left to do ???"
 					local function prepare_for_killing_ns()
 						script.bonus_target { "easy combat" }
 						script.want_familiar "Frumious Bandersnatch"
@@ -5344,7 +5359,7 @@ function script_want_2_day_SCHR()
 end
 
 function script_use_unified_kill_macro()
-	return script_want_2_day_SCHR() or ascensionpath("Heavy Rains") or ascensionpath("Picky") or ascensionpath("Standard") or ascensionpath("Actually Ed the Undying")
+	return script_want_2_day_SCHR() or ascensionpath("Heavy Rains") or ascensionpath("Picky") or ascensionpath("Standard") or ascensionpath("Actually Ed the Undying") or ascensionpathid() >= 24
 end
 
 function ascension_script_option(name)
@@ -5370,8 +5385,18 @@ ascension_automation_setup_href = add_automation_script("setup-ascension-automat
 		return get_page("/main.php")
 	end
 
-	local ok_paths = { [0] = true, ["Avatar of Boris"] = true, [10] = true, ["Avatar of Jarlsberg"] = true, ["BIG!"] = true, ["Avatar of Sneaky Pete"] = true, ["Heavy Rains"] = true, ["Actually Ed the Undying"] = true }
--- ["Way of the Surprising Fist"] = true -- needs updates
+	local ok_paths = {
+		[0] = true,
+--		["Way of the Surprising Fist"] = true -- needs updates
+		["Avatar of Boris"] = true,
+		[10] = true,
+		["Avatar of Jarlsberg"] = true,
+		["BIG!"] = true,
+		["Avatar of Sneaky Pete"] = true,
+		["Heavy Rains"] = true,
+		["Actually Ed the Undying"] = true,
+		["One Crazy Random Summer"] = true,
+	}
 	local path_support_text = ""
 	local pathdesc = string.format([[%s %s]], ascensionstatus(), ascensionpathname())
 	if ascensionpathid() == 0 then

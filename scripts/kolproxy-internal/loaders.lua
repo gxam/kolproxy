@@ -99,7 +99,6 @@ load_file("zone", "zones/hiddencity.lua")
 load_file("zone", "zones/gameinform.lua")
 load_file("zone", "zones/dinseylandfill.lua")
 
-load_file("interface", "interface/automation.lua")
 load_file("interface", "interface/counters.lua")
 load_file("interface", "interface/chatpane.lua")
 load_file("interface", "interface/inventory-collapse.lua")
@@ -112,6 +111,7 @@ load_file("spading", "spading/encounter-simulator.lua")
 load_file("spading", "spading/meatdrops.lua")
 
 load_file("automation", "automation/setup.lua")
+load_file("automation", "automation/readventuring.lua")
 load_file("automation", "automation/daily-visits.lua")
 load_file("automation", "automation/tune-flavour-of-magic.lua")
 load_file("automation", "automation/trick-or-treat.lua")
@@ -195,6 +195,7 @@ load_file("other", "paths/jarlsberg.lua")
 load_file("other", "paths/sneaky-pete.lua")
 load_file("other", "paths/heavy-rains.lua")
 load_file("other", "paths/ed.lua")
+load_file("other", "paths/standard.lua")
 
 load_file("interface", "interface/charpane.lua")
 

@@ -203,6 +203,8 @@ __allow_global_writes = true
 
 local script_cached_stuff = {}
 
+script = {}
+
 function get_automation_scripts(cached_stuff)
 	if not get_pwd then
 		function get_pwd() return session.pwd end
@@ -2115,7 +2117,7 @@ endif
 						eat_item("Hell ramen")
 						eat_item("fettucini Inconnu")
 						eat_item("fettucini Inconnu")
-						did_action = (fullness() >= 12)
+						did_action = (fullness() >= f)
 						return result, resulturl, did_action
 					elseif have_item("milk of magnesium") then
 						inform "using milk"
@@ -2137,7 +2139,7 @@ endif
 						eat_item("Hell ramen")
 						eat_item("fettucini Inconnu")
 						eat_item("fettucini Inconnu")
-						did_action = (fullness() >= 12)
+						did_action = (fullness() >= f)
 						return result, resulturl, did_action
 					end
 				elseif have_skill("Advanced Saucecrafting") and have_skill("Pastamastery") then
@@ -2922,7 +2924,9 @@ endif
 			}
 		else
 			local remaining = remaining_hidden_city_liana_zones()
-			remaining["A Massive Ziggurat"] = nil
+			for _, x in ipairs(cached_stuff.completed_lianas or {}) do
+				remaining[x] = nil
+			end
 			local function findplace(name)
 				for _, x in ipairs(places) do
 					if x.zone == name then
@@ -2931,13 +2935,11 @@ endif
 				end
 			end
 			local x
-			if not cached_stuff.unlocked_massive_ziggurat then
-				x = findplace("A Massive Ziggurat")
-			elseif next(remaining) then
+			if next(remaining) then
 				x = findplace(next(remaining))
 			end
 			if not x then
-				critical("Kill lianas without machete")
+				critical("No place to kill lianas")
 			end
 			run_task {
 				message = "cut liana at "..x.zone,
@@ -2947,9 +2949,8 @@ endif
 					zone = x.zone,
 					macro_function = macro_kill_monster,
 					choice_function = function(advtitle, choicenum, pagetext)
-						if x.zone == "A Massive Ziggurat" then
-							cached_stuff.unlocked_massive_ziggurat = true
-						end
+						cached_stuff.completed_lianas = cached_stuff.completed_lianas or {}
+						table.insert(cached_stuff.completed_lianas, x.zone)
 						if advtitle == x.choice or (x.choice2 and advtitle == x.choice2) then
 							if pagetext:contains(x.option) then
 								return x.option
@@ -3481,7 +3482,7 @@ endif
 		if not have_item("dinghy plans") then
 			if count_item("Shore Inc. Ship Trip Scrip") >= 3 then
 				inform "buy dinghy plans"
-				buy_shore_inc_item("dinghy plans")
+				set_result(buy_shore_inc_item("dinghy plans"))
 				did_action = have_item("dinghy plans")
 			else
 				inform "shore for dinghy plans"
@@ -4414,7 +4415,7 @@ endif
 			Mysticality = "Tropical Paradise Island Getaway",
 			Moxie = "Large Donkey Mountain Ski Resort",
 		}
-		result, resulturl, advagain = autoadventure { zoneid = 355, noncombatchoices = { ["Welcome to The Shore, Inc."] = choices[mainstat_type()] } }
+		result, resulturl, advagain = autoadventure { zoneid = 355, noncombatchoices = { ["Welcome to The Shore, Inc."] = choices[get_mainstat_type()] } }
 		return result, resulturl, advagain
 	end
 
@@ -4470,7 +4471,7 @@ endif
 		end
 		local beachpt = get_place("desertbeach")
 		if not beachpt:contains("Gnasir") then
-			set_result(run_task {
+			run_task {
 				message = "find gnasir",
 				minmp = 70,
 				equipment = { offhand = can_wear_weapons() and "UV-resistant compass" or nil },
@@ -4479,7 +4480,7 @@ endif
 					macro_function = macro_noodleserpent,
 					noncombats = { ["A Sietch in Time"] = "Whoops." },
 				}
-			})
+			}
 			if not did_action and not locked() then
 				local beachpt = get_place("desertbeach")
 				did_action = beachpt:contains("Gnasir")
@@ -4942,6 +4943,9 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 	if zoneid and zoneid ~= "?" then
 		zoneid = get_zoneid(zoneid)
 	end
+	local function can_adventure_again(pt)
+		return zoneid and pt:match([[<a href="adventure.php%?snarfblat=[0-9]*">Adventure Again]])
+	end
 	local already_ran_macro = false
 	local function handle_fight(pt, url)
 		local advagain = nil
@@ -4951,7 +4955,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 		elseif pt:contains([[state['fightover'] = true;]]) or true then -- HACK: doesn't get set with combat bar disabled
 			if pt:contains("You lose.") then
 				advagain = false
-			elseif zoneid and pt:match([[<a href="adventure.php%?snarfblat=[0-9]*">Adventure Again]]) then
+			elseif can_adventure_again(pt) then
 				advagain = true
 			elseif pt:contains("You have been defeated, for now.") then
 				advagain = false
@@ -4998,7 +5002,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 			end
 		end
 		adventure_title = (adventure_title or ""):gsub(" %(#[0-9]*%)$", "")
-		if found_results and zoneid and pt:contains([[<a href="adventure.php?snarfblat=]]..zoneid..[[">Adventure Again]]) then
+		if found_results and can_adventure_again(pt) then
 			advagain = true
 			return nil, pt, url, advagain
 		end
@@ -5045,7 +5049,7 @@ function handle_adventure_result(pt, url, zoneid, macro, noncombatchoices, speci
 	end
 	local function handle_other(pt, url)
 		local advagain = false
-		if zoneid and pt:contains([[<a href="adventure.php?snarfblat=]]..zoneid..[[">Adventure Again]]) then
+		if can_adventure_again(pt) then
 			advagain = true
 -- 		else
 -- 			print("non-fight non-choice unhandled url", url)

@@ -521,6 +521,9 @@ function parse_items()
 					items[itemid].equip_requirements = items[itemid].equip_requirements or {}
 					items[itemid].equip_requirements["You may not equip more than one of these at a time"] = true
 				end
+				if bonuslist:match("Class:") then
+					items[itemid].class = bonuslist:match([[Class: "(.-)"]])
+				end
 			else
 				hardwarn("modifiers:item does not exist", name)
 			end
@@ -591,10 +594,20 @@ function verify_items(data)
 		["Sneaky Pete's basket"] = { attack_stat = "Moxie" },
 		["Staff of Fats"] = { id = 2268 },
 		["Spookyraven library key"] = { id = 7302 },
+		["Galapagosian Cuisses"] = { class = "Turtle Tamer" },
+	}
+	local known_classes = {
+		["Seal Clubber"] = true,
+		["Turtle Tamer"] = true,
+		["Pastamancer"] = true,
+		["Sauceror"] = true,
+		["Disco Bandit"] = true,
+		["Accordion Thief"] = true,
 	}
 	local return_data = {}
 	for x, y in pairs(data) do
-		if y.id == 7964 then -- Ed's Staff of Fats
+		if y.class and not known_classes[y.class] then
+		elseif y.id == 7964 then -- Ed's Staff of Fats
 		elseif not return_data[y.name] or y.id > return_data[y.name].id then
 			return_data[y.name] = y
 		end
@@ -653,17 +666,17 @@ local function parse_monster_stats(stats, monster_debug_line)
 				end
 			end
 		end
-		if not name or not value then
-			if stats:sub(i, i) == " " then
-				softwarn("monsters.txt:malformed line", monster_debug_line)
-			else
-				error_count_hard = error_count_hard + 1
-				print("WARNING: failed to parse monster stat", stats:sub(i))
-				print("DEBUG: ", monster_debug_line)
-				return statstbl
-			end
-		else
+		if name and value then
 			statstbl[name] = value
+		elseif stats:sub(i, i) == " " then
+			softwarn("monsters.txt:malformed line", monster_debug_line)
+		elseif stats:contains("DUMMY") then
+			return statstbl
+		else
+			error_count_hard = error_count_hard + 1
+			print("WARNING: failed to parse monster stat", stats:sub(i))
+			print("DEBUG: ", monster_debug_line)
+			return statstbl
 		end
 		i = pos
 	end

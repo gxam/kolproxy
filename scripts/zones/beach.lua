@@ -98,7 +98,7 @@ end
 add_automator("/fight.php", function()
 	if text:contains(">Desert exploration <b>+") then
 		local explored = get_desert_exploration()
-		text = text:gsub(">Desert exploration <b>%+[0-9]*%%</b>", [[%0 <span style="color:green">{&nbsp;]] .. tostring(explored) .. [[%% explored&nbsp;}</span>]])
+		text = text:gsub(">Desert exploration <b>%+[0-9]*%%</b>", [[%0 <span style="color: green">{&nbsp;]] .. tostring(explored) .. [[%% explored&nbsp;}</span>]])
 	end
 end)
 
@@ -113,14 +113,6 @@ add_ascension_assistance(function() return count_item("worm-riding manual page")
 	get_place("desertbeach", "db_gnasir")
 	async_post_page("/choice.php", { pwd = session.pwd, whichchoice = 805, option = 2 })
 	async_post_page("/choice.php", { pwd = session.pwd, whichchoice = 805, option = 1 })
-end)
-
-add_ascension_assistance(function() return have_item("desert sightseeing pamphlet") end, function()
-	local c = count_item("desert sightseeing pamphlet")
-	use_item("desert sightseeing pamphlet")()
-	if count_item("desert sightseeing pamphlet") < c then
-		return true
-	end
 end)
 
 add_warning {

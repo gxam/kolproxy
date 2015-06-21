@@ -1,6 +1,6 @@
 -- printer.lua
 
-local script_files_kolproxy_version = "3.49-beta"
+local script_files_kolproxy_version = "3.50-dev"
 
 -- io = nil
 os = nil
@@ -112,7 +112,7 @@ mods["/main.php"] = {
 }
 
 mods["/charsheet.php"] = {
-	[ [[>Ascensions:</a></td><td><b>[0-9,.]-</b>]] ] = [[%0 <a href="custom-logs?pwd=]] .. pwd .. [[" style="color:green">{ View logs }</a>]]
+	[ [[>Ascensions:</a></td><td><b>[0-9,.]-</b>]] ] = [[%0 <a href="custom-logs?pwd=]] .. pwd .. [[" style="color: green">{ View logs }</a>]]
 }
 
 mods["/loggedout.php"] = {
